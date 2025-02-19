@@ -18,6 +18,8 @@ const pos_sdk = require("pos-validation-sdk");
     let token = token_response.access_token;
     // console.log("Access Token:", token);
 
+
+    // Construct input for validate_basket
     let input = {
         "basket": [
           {
@@ -40,8 +42,13 @@ const pos_sdk = require("pos-validation-sdk");
       };
 
 
+    // Get basket validation output, get applied_coupons and update receipt
     let output = await pos_sdk.validate_basket(input, tcb_endpoint, access_key, token);
     console.log(JSON.stringify(output, null, 2));
+
+    // Rollback coupons
+    let rollback_output = await pos_sdk.rollback_coupons(output.basket_validation_output.applied_coupons.map(coupon => coupon.coupon_code), tcb_endpoint, "retailer", access_key, token);
+    console.log(JSON.stringify(rollback_output, null, 2));
 
 })();
 ```
