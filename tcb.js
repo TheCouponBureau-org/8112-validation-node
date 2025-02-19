@@ -3,15 +3,15 @@ const axios = require("axios");
 // From the list of scanned coupons, resolve fetch code and returns the list of serialized coupons
 
 // Returns array {gs1: gs1, base_gs1: base_gs1, purchase_requirement: purchase_requirement || null}
-async function validate_coupons(coupons, tcb_endpoint, access_key, access_token) {
+async function validate_coupons(coupons, tcb_endpoint, access_key, access_token, pre_process = "yes", include_check_digit = "yes", offline = "no") {
     let startTime = performance.now();
     try {
 
         const response = await axios.post(`${tcb_endpoint}/retailer/redeem`, {
             gs1s: coupons,
-            pre_process: "yes",
-            include_check_digit: "yes",
-            offline: "no"
+            pre_process: pre_process,
+            include_check_digit: include_check_digit,
+            offline: offline
         }, {
             headers: {
                     'Content-Type': 'application/json',
@@ -41,7 +41,7 @@ async function validate_coupons(coupons, tcb_endpoint, access_key, access_token)
     } catch (error) {
         
         // console.log("*** redeem error", error);
-        if ( error.response.data && error.response.data.code === 'EXCEED_MAXIMUM' ) {
+        if ( error?.response?.data && error.response.data.code === 'EXCEED_MAXIMUM' ) {
             
             let gs1s = error.response.data.gs1s;
             let gs1s_chunks = [];
@@ -51,12 +51,20 @@ async function validate_coupons(coupons, tcb_endpoint, access_key, access_token)
             // Redeem chunks one by one
             let promises = [];
             for ( let i = 0; i < gs1s_chunks.length; i++ ) {
-                let promise = redeem({
+
+                let promise = axios.post(`${tcb_endpoint}/retailer/redeem`, {
                     gs1s: gs1s_chunks[i],
-                    pre_process: redeem_params.pre_process,
-                    include_check_digit: redeem_params.include_check_digit,
-                    offline: redeem_params.offline
+                    pre_process: pre_process,
+                    include_check_digit: include_check_digit,
+                    offline: offline
+                }, {
+                    headers: {
+                            'Content-Type': 'application/json',
+                            'x-access-token': access_token,
+                            'x-api-key': access_key
+                        }
                 });
+                
                 promises.push(promise);
             }
             
@@ -86,8 +94,13 @@ async function validate_coupons(coupons, tcb_endpoint, access_key, access_token)
             }
             
         }
-        
-        throw new Error(`Error validating coupons: ${error.message}`);
+
+        let endTime = performance.now();
+        return {
+            coupons: [],
+            tcb_execution_time_in_ms: 0,
+            tcb_network_latency_in_ms: endTime - startTime
+        }
     }
 }
 
