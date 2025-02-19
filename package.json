@@ -1,14 +1,14 @@
 {
-  "name": "8112-validation-node",
+  "name": "pos-validation-sdk",
   "version": "1.0.0",
-  "description": "",
+  "description": "POS validation SDK for 8112",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": ["8112", "validation", "sdk", "thecouponbureau"],
+  "author": "Abhijit Das (abhijit@thecouponbureau.org)",
+  "license": "MIT",
   "dependencies": {
     "ajv": "^8.17.1",
     "axios": "^1.7.9"

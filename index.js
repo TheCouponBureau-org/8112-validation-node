@@ -19,9 +19,16 @@ async function access_token(tcb_endpoint, access_key, secret_key) {
             }
         });
 
-        return response.data['x-access-token'];
+        return {
+            status: "success",
+            access_token: response.data['x-access-token'],
+            access_key: access_key
+        }
     } catch (error) {
-        throw new Error('Error getting access token:', error.message);
+        return {
+            status: "error",
+            message: error.message
+        }
     }
 }
 
@@ -40,12 +47,15 @@ async function validate_basket(input, tcb_endpoint, access_key, access_token) {
     input.coupons = coupons;
 
     // Validate basket
-    const basket_validation_output = await validate_basket_helper(input);
+    const {basket_validation_output} = await validate_basket_helper(input);
 
     let end_time = performance.now();
     let lib_execution_time_in_ms = end_time - start_time - tcb_execution_time_in_ms - tcb_network_latency_in_ms;
 
     // If applied_coupons is > 0, do actual redemption
+    if (basket_validation_output.applied_coupons.length > 0) {
+        let coupons = basket_validation_output.applied_coupons.map(coupon => coupon.coupon_code);
+    }
 
     return {
         basket_validation_output,

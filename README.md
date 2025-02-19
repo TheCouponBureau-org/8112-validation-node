@@ -1,11 +1,20 @@
-const { access_token, validate_basket } = require(".");
+```
+npm install pos-validation-sdk
+```
+
+# Sample Usage
+
+```
+
+const pos_sdk = require("pos-validation-sdk");
 
 (async () => {
     const tcb_endpoint = "https://api.try.thecouponbureau.org";
-    const access_key = "18ac58d9ec97ad536f1715782830cdb3";
-    const secret_key = "f20742cd9ba56ee8271f81b718df7844";
+    const access_key = "18ac58#################82830cdb3";
+    const secret_key = "f20742#################718df7844";
 
-    let token_response = await access_token(tcb_endpoint, access_key, secret_key);
+    // Get Access Token
+    let token_response = await pos_sdk.access_token(tcb_endpoint, access_key, secret_key);
     let token = token_response.access_token;
     // console.log("Access Token:", token);
 
@@ -31,7 +40,8 @@ const { access_token, validate_basket } = require(".");
       };
 
 
-    let output = await validate_basket(input, tcb_endpoint, access_key, token);
+    let output = await pos_sdk.validate_basket(input, tcb_endpoint, access_key, token);
     console.log(JSON.stringify(output, null, 2));
 
 })();
+```

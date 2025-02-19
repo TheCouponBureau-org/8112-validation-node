@@ -40,7 +40,7 @@ async function validate_coupons(coupons, tcb_endpoint, access_key, access_token)
         };
     } catch (error) {
         
-        console.log("*** redeem error", error);
+        // console.log("*** redeem error", error);
         if ( error.response.data && error.response.data.code === 'EXCEED_MAXIMUM' ) {
             
             let gs1s = error.response.data.gs1s;
