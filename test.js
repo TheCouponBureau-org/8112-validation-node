@@ -31,6 +31,6 @@ const { access_token, validate_basket } = require(".");
 
 
     let output = await validate_basket(input, tcb_endpoint, access_key, token);
-    console.log(output);
+    console.log(JSON.stringify(output, null, 2));
 
 })();

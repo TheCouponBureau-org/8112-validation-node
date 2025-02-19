@@ -36,19 +36,20 @@ async function validate_basket(input, tcb_endpoint, access_key, access_token) {
 
     // Validate coupons
     const { coupons, tcb_execution_time_in_ms, tcb_network_latency_in_ms } = await validate_coupons(input.coupons, tcb_endpoint, access_key, access_token);
+    
     input.coupons = coupons;
 
     // Validate basket
     const basket_validation_output = await validate_basket_helper(input);
 
     let end_time = performance.now();
-    let execution_time_in_ms = end_time - start_time;
+    let lib_execution_time_in_ms = end_time - start_time - tcb_execution_time_in_ms - tcb_network_latency_in_ms;
 
     // If applied_coupons is > 0, do actual redemption
 
     return {
         basket_validation_output,
-        execution_time_in_ms,
+        lib_execution_time_in_ms,
         tcb_execution_time_in_ms,
         tcb_network_latency_in_ms
     };

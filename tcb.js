@@ -22,13 +22,14 @@ async function validate_coupons(coupons, tcb_endpoint, access_key, access_token)
         let endTime = performance.now();
         let tcb_execution_time_in_ms = response.data.execution_time_in_ms;
 
+        // console.log("response", response.data);
+
         // Convert newly_redeemed to {gs1: "...", purchase_requirement: {}}
         let coupons_adapted = [];
         for ( let i = 0; i < response.data.newly_redeemed.length; i++ ) {
             coupons_adapted.push({
                 gs1: response.data.newly_redeemed[i].gs1,
-                base_gs1: response.data.newly_redeemed[i].base_gs1,
-                purchase_requirement: response.data.master_offer_files[response.data.newly_redeemed[i].base_gs1]
+                purchase_requirement: response.data.master_offer_files[response.data.newly_redeemed[i].master_offer_file]
             });
         }
         
@@ -69,8 +70,7 @@ async function validate_coupons(coupons, tcb_endpoint, access_key, access_token)
                     for ( let j = 0; j < redemption_outputs[i].newly_redeemed.length; j++ ) {
                         coupons_adapted.push({
                             gs1: redemption_outputs[i].newly_redeemed[j].gs1,
-                            base_gs1: redemption_outputs[i].newly_redeemed[j].base_gs1,
-                            purchase_requirement: redemption_outputs[i].master_offer_files[redemption_outputs[i].newly_redeemed[j].base_gs1]
+                            purchase_requirement: redemption_outputs[i].master_offer_files[redemption_outputs[i].newly_redeemed[j].master_offer_file]
                         });
                     }
                     newly_redeemed = [...newly_redeemed, ...coupons_adapted];
