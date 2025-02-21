@@ -1,10 +1,38 @@
 const Ajv = require("ajv");
 const axios = require("axios");
+const fs = require("fs");
 const { INPUT_SCHEMA } = require("./constant");
 const { validate_coupons } = require("./tcb");
 const { validate_basket_helper } = require("./validate_basket");
 
 const ajv = new Ajv({ allErrors: true });
+
+
+async function get_access_token(tcb_endpoint, access_key, secret_key) {
+    // Check local file .tcb_access_token in sync
+    try {
+        let access_token_value = fs.readFileSync('.tcb_access_token', 'utf8');
+        access_token_value = JSON.parse(access_token_value);
+        if (access_token_value.valid_till < Date.now()) {
+            let access_token_response = await access_token(tcb_endpoint, access_key, secret_key);
+            access_token_value = {
+                access_token: access_token_response.access_token,
+                valid_till: Date.now() + 23 * 60 * 60 * 1000 // 23 hours from now in epoch time
+            }
+            fs.writeFileSync('.tcb_access_token', JSON.stringify(access_token_value));
+        }
+        return access_token_value.access_token;
+    } catch (error) {
+        let access_token_response = await access_token(tcb_endpoint, access_key, secret_key);
+        access_token_value = {
+            access_token: access_token_response.access_token,
+            valid_till: Date.now() + 23 * 60 * 60 * 1000 // 23 hours from now in epoch time
+        };
+        fs.writeFileSync('.tcb_access_token', JSON.stringify(access_token_value));
+        return access_token_value.access_token;
+    }
+
+}
 
 // Get access token from TCB API
 async function access_token(tcb_endpoint, access_key, secret_key) {
@@ -33,13 +61,16 @@ async function access_token(tcb_endpoint, access_key, secret_key) {
 }
 
 // Validate basket input
-async function validate_basket(input, tcb_endpoint, access_key, access_token) {
+async function validate_basket(input, tcb_endpoint, access_key, secret_key) {
+
     let start_time = performance.now();
     const validate = ajv.compile(INPUT_SCHEMA);
     const valid = validate(input);
     if (!valid) {
         throw new Error('Invalid input', validate.errors);
     }
+
+    let access_token = await get_access_token(tcb_endpoint, access_key, secret_key);
 
     // Validate coupons
     let { coupons, tcb_execution_time_in_ms, tcb_network_latency_in_ms } = await validate_coupons(input.coupons, tcb_endpoint, access_key, access_token);
@@ -70,8 +101,9 @@ async function validate_basket(input, tcb_endpoint, access_key, access_token) {
 
 }
 
-async function rollback_coupons(coupons, tcb_endpoint, mode, access_key, access_token) {
+async function rollback_coupons(coupons, tcb_endpoint, mode, access_key, secret_key) {
     let start_time = performance.now();
+    let access_token = await get_access_token(tcb_endpoint, access_key, secret_key);
     try {
         let promises = [];
         for (let coupon of coupons) {
@@ -118,7 +150,7 @@ async function rollback_coupons(coupons, tcb_endpoint, mode, access_key, access_
 }
 
 module.exports = {
-    access_token,
+    get_access_token,
     validate_basket,
     rollback_coupons
 }
