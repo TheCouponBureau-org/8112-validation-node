@@ -1,16 +1,22 @@
 {
   "name": "pos-validation-sdk",
-  "version": "1.0.5",
+  "version": "1.0.7",
   "description": "POS validation SDK for (AI) 8112",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["8112", "validation", "sdk", "thecouponbureau"],
+  "keywords": [
+    "8112",
+    "validation",
+    "sdk",
+    "thecouponbureau"
+  ],
   "author": "Abhijit Das (abhijit@thecouponbureau.org)",
   "license": "MIT",
   "dependencies": {
     "ajv": "^8.17.1",
-    "axios": "^1.7.9"
+    "axios": "^1.7.9",
+    "dotenv": "^16.4.7"
   }
 }

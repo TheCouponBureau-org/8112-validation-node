@@ -3,26 +3,34 @@ const axios = require("axios");
 // From the list of scanned coupons, resolve fetch code and returns the list of serialized coupons
 
 // Returns array {gs1: gs1, base_gs1: base_gs1, purchase_requirement: purchase_requirement || null}
-async function validate_coupons(coupons, tcb_endpoint, access_key, access_token, pre_process = "yes", include_check_digit = "yes", offline = "no") {
+async function validate_coupons(coupons, tcb_endpoint, access_key, access_token, retailer_email_domain, pre_process = "yes", include_check_digit = "yes", offline = "no") {
     let startTime = performance.now();
-    try {
+    let headers = {
+        'Content-Type': 'application/json',
+        'x-access-token': access_token,
+        'x-api-key': access_key
+    };
+    // console.log('headers', headers);
 
-        const response = await axios.post(`${tcb_endpoint}/retailer/redeem`, {
+    try {
+        const redeemParams = {
             gs1s: coupons,
             pre_process: pre_process,
             include_check_digit: include_check_digit,
             offline: offline
-        }, {
-            headers: {
-                    'Content-Type': 'application/json',
-                    'x-access-token': access_token,
-                    'x-api-key': access_key
-                }
+        }
+        if ( retailer_email_domain ) {
+            redeemParams.retailer_email_domain = retailer_email_domain;
+        }
+
+        // console.log("redeemParams", tcb_endpoint, redeemParams);
+        const response = await axios.post(`${tcb_endpoint}/retailer/redeem`, redeemParams, {
+            headers: headers
         });
         let endTime = performance.now();
         let tcb_execution_time_in_ms = response.data.execution_time_in_ms;
 
-        // console.log("response", response.data);
+        console.log("response", response.data);
 
         // Convert newly_redeemed to {gs1: "...", purchase_requirement: {}}
         let coupons_adapted = [];
@@ -52,17 +60,18 @@ async function validate_coupons(coupons, tcb_endpoint, access_key, access_token,
             let promises = [];
             for ( let i = 0; i < gs1s_chunks.length; i++ ) {
 
-                let promise = axios.post(`${tcb_endpoint}/retailer/redeem`, {
+                const redeemParams = {
                     gs1s: gs1s_chunks[i],
                     pre_process: pre_process,
                     include_check_digit: include_check_digit,
                     offline: offline
-                }, {
-                    headers: {
-                            'Content-Type': 'application/json',
-                            'x-access-token': access_token,
-                            'x-api-key': access_key
-                        }
+                }
+                if ( retailer_email_domain ) {
+                    redeemParams.retailer_email_domain = retailer_email_domain;
+                }
+
+                let promise = axios.post(`${tcb_endpoint}/retailer/redeem`, redeemParams, {
+                    headers: headers
                 });
                 
                 promises.push(promise);

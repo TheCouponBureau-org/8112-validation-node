@@ -13,7 +13,7 @@ This document provides information on how to use the libraries defined in (AI) 8
 
 ### **Function Signature:**
 ```js
-validate_basket(input, tcb_endpoint, access_key, secret_key)
+validate_basket(input, tcb_endpoint, access_key, secret_key, retailer_email_domain)
 ```
 
 ### **Input Format:**
@@ -41,6 +41,8 @@ validate_basket(input, tcb_endpoint, access_key, secret_key)
 ```
 
 The **basket** contains the items a user has bought, and **coupons** include the **8112 coupons** scanned at the checkout counter. This can be a bundle ID, fetch code, single serialized data string, FSI coupon, or any combination.
+
+**retailer_email_domain** is the email domain of the retailer. This is used to validate the coupons using accelerator API.
 
 The function calculates the **discount**, makes necessary API calls to the **TCB backend**, and selects the best possible discount. It returns:
 

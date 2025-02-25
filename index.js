@@ -13,7 +13,8 @@ async function get_access_token(tcb_endpoint, access_key, secret_key) {
     try {
         let access_token_value = fs.readFileSync('.tcb_access_token', 'utf8');
         access_token_value = JSON.parse(access_token_value);
-        if (access_token_value.valid_till < Date.now()) {
+        // console.log("*** access_token_value", access_token_value);
+        if (access_token_value.valid_till < Date.now() || !access_token_value.access_token) {
             let access_token_response = await access_token(tcb_endpoint, access_key, secret_key);
             access_token_value = {
                 access_token: access_token_response.access_token,
@@ -61,7 +62,7 @@ async function access_token(tcb_endpoint, access_key, secret_key) {
 }
 
 // Validate basket input
-async function validate_basket(input, tcb_endpoint, access_key, secret_key) {
+async function validate_basket(input, tcb_endpoint, access_key, secret_key, retailer_email_domain) {
 
     let start_time = performance.now();
     const validate = ajv.compile(INPUT_SCHEMA);
@@ -73,7 +74,7 @@ async function validate_basket(input, tcb_endpoint, access_key, secret_key) {
     let access_token = await get_access_token(tcb_endpoint, access_key, secret_key);
 
     // Validate coupons
-    let { coupons, tcb_execution_time_in_ms, tcb_network_latency_in_ms } = await validate_coupons(input.coupons, tcb_endpoint, access_key, access_token);
+    let { coupons, tcb_execution_time_in_ms, tcb_network_latency_in_ms } = await validate_coupons(input.coupons, tcb_endpoint, access_key, access_token, retailer_email_domain);
     
     input.coupons = coupons;
 
@@ -87,7 +88,7 @@ async function validate_basket(input, tcb_endpoint, access_key, secret_key) {
     if (basket_validation_output.applied_coupons.length > 0) {
         let coupons = basket_validation_output.applied_coupons.map(coupon => coupon.coupon_code);
         // Redeem coupons actually
-        const redeem_response = await validate_coupons(coupons, tcb_endpoint, access_key, access_token, "no", "yes", "no");
+        const redeem_response = await validate_coupons(coupons, tcb_endpoint, access_key, access_token, retailer_email_domain, "no", "yes", "no");
         tcb_execution_time_in_ms += redeem_response.tcb_execution_time_in_ms;
         tcb_network_latency_in_ms += redeem_response.tcb_network_latency_in_ms;
     }
