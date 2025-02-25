@@ -30,7 +30,7 @@ async function validate_coupons(coupons, tcb_endpoint, access_key, access_token,
         let endTime = performance.now();
         let tcb_execution_time_in_ms = response.data.execution_time_in_ms;
 
-        console.log("response", response.data);
+        // console.log("response", response.data);
 
         // Convert newly_redeemed to {gs1: "...", purchase_requirement: {}}
         let coupons_adapted = [];

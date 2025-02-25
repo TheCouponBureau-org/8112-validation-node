@@ -9,9 +9,9 @@ const ajv = new Ajv({ allErrors: true });
 
 
 async function get_access_token(tcb_endpoint, access_key, secret_key) {
-    // Check local file .tcb_access_token in sync
+    // Check local file .tcb_<access_key> in sync
     try {
-        let access_token_value = fs.readFileSync('.tcb_access_token', 'utf8');
+        let access_token_value = fs.readFileSync(`.tcb_${access_key}`, 'utf8');
         access_token_value = JSON.parse(access_token_value);
         // console.log("*** access_token_value", access_token_value);
         if (access_token_value.valid_till < Date.now() || !access_token_value.access_token) {
@@ -20,7 +20,7 @@ async function get_access_token(tcb_endpoint, access_key, secret_key) {
                 access_token: access_token_response.access_token,
                 valid_till: Date.now() + 23 * 60 * 60 * 1000 // 23 hours from now in epoch time
             }
-            fs.writeFileSync('.tcb_access_token', JSON.stringify(access_token_value));
+            fs.writeFileSync(`.tcb_${access_key}`, JSON.stringify(access_token_value));
         }
         return access_token_value.access_token;
     } catch (error) {
@@ -29,7 +29,7 @@ async function get_access_token(tcb_endpoint, access_key, secret_key) {
             access_token: access_token_response.access_token,
             valid_till: Date.now() + 23 * 60 * 60 * 1000 // 23 hours from now in epoch time
         };
-        fs.writeFileSync('.tcb_access_token', JSON.stringify(access_token_value));
+        fs.writeFileSync(`.tcb_${access_key}`, JSON.stringify(access_token_value));
         return access_token_value.access_token;
     }
 
@@ -77,6 +77,19 @@ async function validate_basket(input, tcb_endpoint, access_key, secret_key, reta
     let { coupons, tcb_execution_time_in_ms, tcb_network_latency_in_ms } = await validate_coupons(input.coupons, tcb_endpoint, access_key, access_token, retailer_email_domain);
     
     input.coupons = coupons;
+
+    // Calculate discount_in_cents for each coupon
+    for (let coupon of input.coupons) {
+        let input_with_single_coupon = {
+            basket: input.basket,
+            coupons: [coupon]
+        }
+        let {basket_validation_output} = validate_basket_helper(input_with_single_coupon);
+        coupon.discount_in_cents = basket_validation_output.discount_in_cents;
+    }
+
+    // Sort coupons by discount_in_cents in descending order
+    input.coupons.sort((a, b) => b.discount_in_cents - a.discount_in_cents);
 
     // Validate basket
     const {basket_validation_output} = await validate_basket_helper(input);
