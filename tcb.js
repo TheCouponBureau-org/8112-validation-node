@@ -76,29 +76,30 @@ async function validate_coupons(coupons, tcb_endpoint, access_key, access_token,
                 
                 promises.push(promise);
             }
-            
+            let tcb_execution_time_in_ms_start = performance.now();
             let redemption_outputs = await Promise.all(promises);
+            let tcb_execution_time_in_ms_end = performance.now();
             // Get all newly redeemed gs1s
             let newly_redeemed = [];
             for ( let i=0; i<redemption_outputs.length; i++ ) {
-                if ( redemption_outputs[i]?.newly_redeemed ) {
+                if ( redemption_outputs[i]?.data?.newly_redeemed ) {
                     // convert newly_redeemed to {gs1: "...", purchase_requirement: {}}
                     let coupons_adapted = [];
-                    for ( let j = 0; j < redemption_outputs[i].newly_redeemed.length; j++ ) {
+                    for ( let j = 0; j < redemption_outputs[i].data.newly_redeemed.length; j++ ) {
                         coupons_adapted.push({
-                            gs1: redemption_outputs[i].newly_redeemed[j].gs1,
-                            purchase_requirement: redemption_outputs[i].master_offer_files[redemption_outputs[i].newly_redeemed[j].master_offer_file]
+                            gs1: redemption_outputs[i].data.newly_redeemed[j].gs1,
+                            purchase_requirement: redemption_outputs[i].data.master_offer_files[redemption_outputs[i].data.newly_redeemed[j].master_offer_file]
                         });
                     }
                     newly_redeemed = [...newly_redeemed, ...coupons_adapted];
                 }
             }
             let endTime = performance.now();
-            let tcb_network_latency_in_ms = endTime - startTime - tcb_execution_time_in_ms;
+            let tcb_network_latency_in_ms = endTime - startTime;
 
             return {
                 coupons: newly_redeemed,
-                tcb_execution_time_in_ms: tcb_execution_time_in_ms,
+                tcb_execution_time_in_ms: tcb_execution_time_in_ms_end - tcb_execution_time_in_ms_start,
                 tcb_network_latency_in_ms: tcb_network_latency_in_ms
             }
             

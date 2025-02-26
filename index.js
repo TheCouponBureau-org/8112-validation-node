@@ -95,7 +95,7 @@ async function validate_basket(input, tcb_endpoint, access_key, secret_key, reta
     const {basket_validation_output} = await validate_basket_helper(input);
 
     let end_time = performance.now();
-    let lib_execution_time_in_ms = end_time - start_time - tcb_execution_time_in_ms - tcb_network_latency_in_ms;
+    let lib_execution_time_in_ms = (end_time - start_time - tcb_execution_time_in_ms - tcb_network_latency_in_ms) ;
 
     // If applied_coupons is > 0, do actual redemption
     if (basket_validation_output.applied_coupons.length > 0) {
@@ -108,7 +108,7 @@ async function validate_basket(input, tcb_endpoint, access_key, secret_key, reta
 
     return {
         basket_validation_output,
-        lib_execution_time_in_ms,
+        // lib_execution_time_in_ms,
         tcb_execution_time_in_ms,
         tcb_network_latency_in_ms
     };
