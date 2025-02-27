@@ -4,6 +4,7 @@ This document provides information on how to use the libraries defined in (AI) 8
 
 ## 📌 Functions
 
+- [access_token](#validate_basket)
 - [validate_basket](#validate_basket)
 - [rollback_coupons](#rollback_coupons)
 
