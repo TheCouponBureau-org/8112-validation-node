@@ -3,8 +3,7 @@ const axios = require("axios");
 // From the list of scanned coupons, resolve fetch code and returns the list of serialized coupons
 
 // Returns array {gs1: gs1, base_gs1: base_gs1, purchase_requirement: purchase_requirement || null}
-async function validate_coupons(coupons, tcb_endpoint, access_key, access_token, retailer_email_domain, pre_process = "yes", include_check_digit = "yes", offline = "no") {
-    let startTime = performance.now();
+async function tcb_process_coupons(coupons, tcb_endpoint, access_key, access_token, retailer_email_domain, pre_process = "yes", include_check_digit = "yes", offline = "no") {
     let headers = {
         'Content-Type': 'application/json',
         'x-access-token': access_token,
@@ -27,9 +26,7 @@ async function validate_coupons(coupons, tcb_endpoint, access_key, access_token,
         const response = await axios.post(`${tcb_endpoint}/retailer/redeem`, redeemParams, {
             headers: headers
         });
-        let endTime = performance.now();
-        let tcb_execution_time_in_ms = response.data.execution_time_in_ms;
-
+        
         // console.log("response", response.data);
 
         // Convert newly_redeemed to {gs1: "...", purchase_requirement: {}}
@@ -42,9 +39,7 @@ async function validate_coupons(coupons, tcb_endpoint, access_key, access_token,
         }
         
         return {
-            coupons: coupons_adapted,
-            tcb_execution_time_in_ms: tcb_execution_time_in_ms,
-            tcb_network_latency_in_ms: endTime - startTime - tcb_execution_time_in_ms
+            coupons: coupons_adapted
         };
     } catch (error) {
         
@@ -76,9 +71,7 @@ async function validate_coupons(coupons, tcb_endpoint, access_key, access_token,
                 
                 promises.push(promise);
             }
-            let tcb_execution_time_in_ms_start = performance.now();
             let redemption_outputs = await Promise.allSettled(promises);
-            let tcb_execution_time_in_ms_end = performance.now();
             // Get all newly redeemed gs1s
             let newly_redeemed = [];
             // console.log("redemption_outputs", redemption_outputs);
@@ -97,26 +90,19 @@ async function validate_coupons(coupons, tcb_endpoint, access_key, access_token,
                     }
                 }
             }
-            let endTime = performance.now();
-            let tcb_network_latency_in_ms = endTime - startTime;
-
+            
             return {
-                coupons: newly_redeemed,
-                tcb_execution_time_in_ms: tcb_execution_time_in_ms_end - tcb_execution_time_in_ms_start,
-                tcb_network_latency_in_ms: tcb_network_latency_in_ms
+                coupons: newly_redeemed
             }
             
         }
 
-        let endTime = performance.now();
         return {
-            coupons: [],
-            tcb_execution_time_in_ms: 0,
-            tcb_network_latency_in_ms: endTime - startTime
+            coupons: []
         }
     }
 }
 
 module.exports = {
-    validate_coupons
+    tcb_process_coupons
 }

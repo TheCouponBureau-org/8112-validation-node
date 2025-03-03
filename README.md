@@ -5,6 +5,7 @@ This document provides information on how to use the libraries defined in (AI) 8
 ## 📌 Functions
 
 - [access_token](#access_token)
+- [coupons_valid_for_basket](#coupons_valid_for_basket)
 - [redeem_coupons](#redeem_coupons)
 - [rollback_coupons](#rollback_coupons)
 
@@ -20,35 +21,18 @@ access_token(tcb_endpoint, access_key, secret_key);
 
 The **tcb_endpoint** is the endpoint of the TCB backend. The **access_key** and **secret_key** are the credentials of the TCB backend.
 
-The function returns an **access token** which is used to redeem and rollback coupons.
+The function returns an **access token** which is used in other functions.
 
-Returns:
-
-```json
-{
-  "status": "success",
-  "access_token": "...",
-  "access_key": "..."
-}
-```
-
-If the function fails, it returns:
-
-```json
-{
-  "status": "error",
-  "message": "..."
-}
-```
+If the function fails, it will throw an exception.
 
 ---
 
-## 🛒 Redeem Coupons
+## 🛒 Get Coupons Valid for Basket (coupons_valid_for_basket)
 
 ### **Function Signature:**
 
 ```js
-redeem_coupons(
+coupons_valid_for_basket(
   input,
   tcb_endpoint,
   access_key,
@@ -86,9 +70,9 @@ The **basket** contains the items a user has bought, and **coupons** include the
 
 The **tcb_endpoint** is the endpoint of the TCB backend. Get **access_token** from [access_token](#access_token) function.
 
-**retailer_email_domain** is the email domain of the retailer. It must be provided to validate the coupons using accelerator API.
+**retailer_email_domain** is the email domain of the retailer. It must be provided to validate the coupons using accelerator API. If you are using retailer API, you can skip this parameter (pass `null`).
 
-The function calculates the **discount**, makes necessary API calls to the **TCB backend**, and selects the best possible discount. It returns:
+The function calculates the **discount**, makes necessary API calls to the **TCB backend**, and selects the optimal possible discount. It returns:
 
 ### **Output Format:**
 
@@ -124,6 +108,30 @@ The **discount_in_cents** value can be used to **reduce the total payable amount
 
 ---
 
+## 🛒 Redeem Coupons (redeem_coupons)
+
+### **Function Signature:**
+
+```js
+redeem_coupons(
+  coupons,
+  tcb_endpoint,
+  access_key,
+  access_token,
+  retailer_email_domain
+);
+```
+
+**coupons** is the list of coupons to redeem.
+
+The **tcb_endpoint** is the endpoint of the TCB backend. Get **access_token** from [access_token](#access_token) function.
+
+**retailer_email_domain** is the email domain of the retailer. It must be provided to validate the coupons using accelerator API. If you are using retailer API, you can skip this parameter (pass `null`).
+
+The function returns the list of **successfully redeemed coupons**.
+
+---
+
 ## 🔄 Rollback Coupons
 
 ### **Function Signature:**
@@ -140,103 +148,13 @@ use **mode** as `"accelerator"` to rollback coupons via accelerator API. Else us
 
 ### **Example Usage:**
 
-```js
-const coupons = ["...", "..."]; // List of applied coupons (coupon_code from redeem_coupons function)
-const tcb_endpoint = "https://api.try.thecouponbureau.org";
-const access_key = "GET IT FROM TCB ENTERPRISE SETTINGS";
-const access_token = "GET IT FROM access_token function";
-```
-
----
-
-## 📂 Sample Code
-
-### **1️⃣ Setup the Project**
-
-Create a new folder:
-
-```sh
-mkdir test-pos-validation-sdk
-cd test-pos-validation-sdk
-```
-
-Initialize the project:
-
-```sh
-npm init -y
-```
-
-Install the package:
-
-```sh
-npm install pos-validation-sdk
-```
-
-### **2️⃣ Configure `package.json`**
-
-Add the following to `package.json`:
-
-```json
-"type": "module"
-```
-
-### **3️⃣ Create `index.js`**
-
-Create the file:
-
-```sh
-touch index.js
-```
-
-Add the following code:
-
-```js
-import possdk from "pos-validation-sdk";
-
-(async () => {
-  let input = {
-    basket: [
-      {
-        product_code: "5012345678900",
-        price: 0.25,
-        quantity: 2,
-        unit: "item",
-      },
-      {
-        product_code: "037000934677",
-        price: 1.34,
-        quantity: 3,
-        unit: "item",
-      },
-    ],
-    coupons: [
-      "8112009988459000019133983841909890",
-      "8112009988459000019133512853382124",
-    ],
-  };
-
-  let output = await possdk.redeem_coupons(
-    input,
-    "https://api.try.thecouponbureau.org",
-    "...access_key...",
-    "...access_token..."
-  );
-
-  console.log(JSON.stringify(output, null, 2));
-})();
-```
-
-### **4️⃣ Run the Code**
-
-```sh
-node index.js
-```
+The function returns the list of **successfully rolled back coupons**.
 
 ---
 
 ## ✅ Conclusion
 
-This document outlines how to use **8112 validation functions** for point-of-sale systems, including **redeem coupons** and **roll back coupons**. For further details, refer to **The Coupon Bureau (TCB) API Documentation**.
+This document outlines how to use **8112 validation functions** for point-of-sale systems, including **get coupons valid for basket**, **redeem coupons** and **roll back coupons**. For further details, refer to **The Coupon Bureau (TCB) API Documentation**.
 
 ---
 
