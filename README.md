@@ -60,8 +60,8 @@ coupons_valid_for_basket(
     }
   ],
   "coupons": [
-    "8112009988459000019133983841909890",
-    "8112009988459000019133512853382124"
+    "8112009988459000019133983841900001", 
+    "8112009988459000019133983841900002"
   ]
 }
 ```
@@ -78,13 +78,25 @@ The function calculates the **discount**, makes necessary API calls to the **TCB
 
 ```json
 {
-  "discount_in_cents": 100,
+  "discount_in_cents": 200,
   "applied_coupons": [
     {
-      "coupon_code": "8112009988459000019133492376609383",
+      "coupon_code": "8112009988459000019133983841900001",
       "face_value_in_cents": 100,
       "product_codes": {
-        "gtins": ["037000930396", "037000930396"]
+        "gtins": [
+          "5012345678900"
+          "037000934677"
+        ]
+      }
+    },
+    {
+      "coupon_code": "8112009988459000019133983841900002",
+      "face_value_in_cents": 100,
+      "product_codes": {
+        "gtins": [
+          "037000934677"
+        ]
       }
     }
   ]
