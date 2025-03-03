@@ -53,7 +53,7 @@ async function coupons_valid_for_basket(input, tcb_endpoint, access_key, access_
     input.coupons.sort((a, b) => b.discount_in_cents - a.discount_in_cents);
 
     // Validate basket and find applicable coupons
-    const {basket_validation_output} = await validate_basket_helper(input);
+    const {basket_validation_output} = validate_basket_helper(input);
 
     
     return basket_validation_output;
@@ -62,7 +62,7 @@ async function coupons_valid_for_basket(input, tcb_endpoint, access_key, access_
 
 async function redeem_coupons(coupons, tcb_endpoint, access_key, access_token, retailer_email_domain) {
     
-    const redeem_response = await tcb_process_coupons(coupons, tcb_endpoint, access_key, access_token, retailer_email_domain, "no", "yes", "no");
+    const redeem_response = await tcb_process_coupons(coupons, tcb_endpoint, access_key, access_token, retailer_email_domain, "no", "yes", "yes");
     let redeemed_coupons = redeem_response.coupons.map(coupon => coupon.gs1);
     return redeemed_coupons;
     
