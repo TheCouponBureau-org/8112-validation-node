@@ -1,6 +1,6 @@
 
 const ioredis = require('ioredis');
-const { coupons_valid_for_basket, redeem_coupons, rollback_coupons, set_redis_client, populate_local_database, set_access_token, configure_api_client } = require(".");
+const { coupons_valid_for_basket, redeem_coupons, rollback_coupons, set_redis_client, populate_local_database, set_access_token, configure_api_client, get_access_token } = require(".");
 
 const tcb_endpoint = "https://api.try.thecouponbureau.org";
 const access_key = "e5896b3f738a524882f96998740deaa3";
@@ -23,12 +23,13 @@ const redisClient = new ioredis(redisConnObj);
         await configure_api_client(tcb_endpoint, 10000, 3, 1000);
         
         // Get access token from TCB API
-        await set_access_token(access_key, secret_key);
+        const token =await get_access_token(access_key, secret_key);
+        set_access_token(access_key, token);
         // console.log(token);
 
         // Sync local database
-        // const mof_synced = await populate_local_database("2025-01-01", "2025-03-04", tcb_endpoint, access_key, token);
-        // console.log("MOF Synced", mof_synced.length);
+        const mof_synced = await populate_local_database("2025-01-01", "2025-03-04", tcb_endpoint, access_key, token);
+        console.log("MOF Synced", mof_synced.length);
 
         const input = {
             "basket": [

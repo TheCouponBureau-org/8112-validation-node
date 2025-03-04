@@ -75,7 +75,7 @@ function set_auth_headers(access_key, access_token) {
 
 
 // Get access token from TCB API
-async function set_access_token(access_key, secret_key) {
+async function get_access_token(access_key, secret_key) {
 
     apiClientConfigured();
     
@@ -89,9 +89,12 @@ async function set_access_token(access_key, secret_key) {
         }
     });
 
-    set_auth_headers(access_key, response.data['x-access-token']);
     return response.data['x-access-token'];
     
+}
+
+async function set_access_token(access_key, access_token) {
+    set_auth_headers(access_key, access_token);
 }
 
 // Find applicable coupons and calculate discount_in_cents for each coupon against basket and total discount_in_cents
@@ -165,6 +168,7 @@ async function populate_local_database( from_date, to_date ) {
 
 module.exports = {
     set_redis_client,
+    get_access_token,
     set_access_token,
     coupons_valid_for_basket,
     redeem_coupons,
