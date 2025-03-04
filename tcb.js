@@ -240,7 +240,7 @@ async function redeem(coupons, retailer_email_domain, axiosApiClient, pre_proces
         };
     } catch (error) {
 
-        console.log("*** error", error);
+        // console.log("*** error", error);
 
         if ( no_exceed_maximum_retry ) {
             return {
