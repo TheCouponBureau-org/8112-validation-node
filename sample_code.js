@@ -1,17 +1,34 @@
-const { access_token, coupons_valid_for_basket, redeem_coupons, rollback_coupons } = require(".");
+
+const ioredis = require('ioredis');
+const { coupons_valid_for_basket, redeem_coupons, rollback_coupons, set_redis_client, populate_local_database, set_access_token, configure_api_client } = require(".");
 
 const tcb_endpoint = "https://api.try.thecouponbureau.org";
 const access_key = "e5896b3f738a524882f96998740deaa3";
 const secret_key = "b197a166797f2f38dc73bd9425815823";
 const retailer_email_domain = null; // If you are using accelerator API, pass the retailer email domain
 
-const redisClient = null;
+let redisConnObj = {
+    host: '127.0.0.1',
+    port: 6379,
+};
+
+// const redisClient = null;
+const redisClient = new ioredis(redisConnObj);
 
 (async() => {
+
+        set_redis_client(redisClient);
+
+        // Configure API client
+        await configure_api_client(tcb_endpoint, 10000, 3, 1000);
         
         // Get access token from TCB API
-        const token = await access_token(tcb_endpoint, access_key, secret_key);
+        await set_access_token(access_key, secret_key);
         // console.log(token);
+
+        // Sync local database
+        // const mof_synced = await populate_local_database("2025-01-01", "2025-03-04", tcb_endpoint, access_key, token);
+        // console.log("MOF Synced", mof_synced.length);
 
         const input = {
             "basket": [
@@ -28,19 +45,19 @@ const redisClient = null;
         }
 
         // Get all coupons valid for the basket
-        let basket_validation_output = await coupons_valid_for_basket(input, tcb_endpoint, access_key, token, retailer_email_domain, redisClient);
+        let basket_validation_output = await coupons_valid_for_basket(input, retailer_email_domain, redisClient);
         console.log("Basket Validation Output", JSON.stringify(basket_validation_output, null, 2));
 
-        // Create a new array of coupons which are applied in the basket from the basket_validation_output
+        // // Create a new array of coupons which are applied in the basket from the basket_validation_output
         const applied_coupons = basket_validation_output.applied_coupons.map(coupon => coupon.coupon_code);
         console.log("Applied Coupons", JSON.stringify(applied_coupons, null, 2));
 
-        // Redeem the coupons 
-        let redeemed_coupons = await redeem_coupons(applied_coupons, tcb_endpoint, access_key, token, retailer_email_domain);
+        // // Redeem the coupons 
+        let redeemed_coupons = await redeem_coupons(applied_coupons, retailer_email_domain);
         console.log("Redeemed Coupons Output", JSON.stringify(redeemed_coupons, null, 2));
 
-        // In case of any issues or transaction failure, rollback the coupons
-        let rolled_back_coupons = await rollback_coupons(redeemed_coupons, tcb_endpoint, "retailer", access_key, token);
+        // // In case of any issues or transaction failure, rollback the coupons
+        let rolled_back_coupons = await rollback_coupons(redeemed_coupons, retailer_email_domain ? "accelerator" : "retailer");
         console.log("Rolled Back Coupons Output", JSON.stringify(rolled_back_coupons, null, 2));
 
 })()

@@ -1,11 +1,14 @@
-const axios = require("axios");
-const { decodeAppendedGS1s, sort_coupons_by_discount_in_cents } = require("./util");
+
+
+const { decodeAppendedGS1s, sort_coupons_by_discount_in_cents, parseConsumer8112 } = require("./util");
+const { validate_basket_helper } = require("./validate_basket");
+
 
 
 // From the list of scanned coupons, resolve fetch code and returns the list of serialized coupons
 // FSI will stay as it is, during fetch code resolution, we will add the purchase requirements to the purchase_requirements object
 // Returns array {gs1: gs1, purchase_requirement: purchase_requirement || null}
-async function get_expanded_coupons(coupons, tcb_endpoint, access_key, access_token, retailer_email_domain) {
+async function get_expanded_coupons(coupons, retailer_email_domain, axiosApiClient) {
     // Divide the coupons into serialized coupon, FSI (non serialized) and fetch code array
     let serialized_coupons = [];
     let fetch_code_coupons = [];
@@ -37,10 +40,8 @@ async function get_expanded_coupons(coupons, tcb_endpoint, access_key, access_to
         // purcahse requirements from fetch code coupons
         let redemption_response = await redeem(
             fetch_code_coupons, 
-            tcb_endpoint, 
-            access_key, 
-            access_token, 
             retailer_email_domain, 
+            axiosApiClient,
             "yes", 
             "yes", 
             "no",
@@ -85,7 +86,7 @@ async function get_expanded_coupons(coupons, tcb_endpoint, access_key, access_to
 }
 
 // Input {gs1: gs1, purchase_requirement: null} add the actual purchase requirement to the purchase_requirement key
-async function get_purchase_requirements(coupons, redisClient) {
+async function get_purchase_requirements(coupons, redisClient, axiosApiClient) {
     
     // Get the purchase requirements from redis
     let missing_purchase_requirements = [];
@@ -115,6 +116,7 @@ async function get_purchase_requirements(coupons, redisClient) {
         }
     }
 
+
     // Remove the coupons from coupons array which are not having purchase requirement
     coupons = coupons.filter((coupon) => coupon.purchase_requirement);
 
@@ -126,10 +128,8 @@ async function get_purchase_requirements(coupons, redisClient) {
         try {
             redemption_response = await redeem(
                 gs1s_for_redemption_api,
-                tcb_endpoint,
-                access_key,
-                access_token,
                 retailer_email_domain,
+                axiosApiClient,
                 "yes",
                 "yes",
                 "no"
@@ -170,13 +170,13 @@ async function get_purchase_requirements(coupons, redisClient) {
 // From the list of scanned coupons, resolve fetch code and returns the list of serialized coupons
 
 // Returns array {gs1: gs1, base_gs1: base_gs1, purchase_requirement: purchase_requirement || null}
-async function tcb_process_coupons(basket, coupons, tcb_endpoint, access_key, access_token, retailer_email_domain, redisClient = null, pre_process = "yes", include_check_digit = "yes", offline = "no") {
+async function tcb_process_coupons(basket, coupons, retailer_email_domain, redisClient = null, axiosApiClient, pre_process = "yes", include_check_digit = "yes", offline = "no") {
     
     if ( redisClient ) {
         try {
             await redisClient.get("TEST_MOF");
-            coupons = await get_expanded_coupons(coupons, tcb_endpoint, access_key, access_token, retailer_email_domain);
-            coupons = await get_purchase_requirements(coupons, redisClient); // coupons with purchase requirements
+            coupons = await get_expanded_coupons(coupons, retailer_email_domain, axiosApiClient);
+            coupons = await get_purchase_requirements(coupons, redisClient, axiosApiClient); // coupons with purchase requirements
 
             coupons = sort_coupons_by_discount_in_cents(basket, coupons);
             // Get applicable coupons
@@ -184,7 +184,7 @@ async function tcb_process_coupons(basket, coupons, tcb_endpoint, access_key, ac
             let applied_coupons = basket_validation_output.applied_coupons.map(coupon => coupon.coupon_code);
 
             // Validate in TCB with pre_process = yes, include_check_digit = yes, offline = no
-            let tcb_validated_coupons = await redeem(applied_coupons, tcb_endpoint, access_key, access_token, retailer_email_domain, "yes", "yes", "no");
+            let tcb_validated_coupons = await redeem(applied_coupons, retailer_email_domain, axiosApiClient, "yes", "yes", "no");
             
             // Find the coupons that are not validated by TCB
             let tcb_not_validated_coupons = coupons.filter(coupon => !tcb_validated_coupons.coupons.some(tcb_coupon => tcb_coupon.gs1 === coupon.gs1));
@@ -196,25 +196,20 @@ async function tcb_process_coupons(basket, coupons, tcb_endpoint, access_key, ac
             
             return {coupons};
         } catch ( err ) {
+            console.log("*** redis error", err);
             throw new Error("Redis connection error");
         }
     }
     
     // console.log('headers', headers);
-    let applied_coupons = await redeem(coupons, tcb_endpoint, access_key, access_token, retailer_email_domain, pre_process, include_check_digit, offline);
+    let applied_coupons = await redeem(coupons, retailer_email_domain, axiosApiClient, pre_process, include_check_digit, offline);
     applied_coupons = applied_coupons.coupons;
     applied_coupons = sort_coupons_by_discount_in_cents(basket, applied_coupons);
     
     return {coupons: applied_coupons};
 }
 
-async function redeem(coupons, tcb_endpoint, access_key, access_token, retailer_email_domain, pre_process, include_check_digit, offline, no_exceed_maximum_retry = false ) {
-    
-    let headers = {
-        'Content-Type': 'application/json',
-        'x-access-token': access_token,
-        'x-api-key': access_key
-    };
+async function redeem(coupons, retailer_email_domain, axiosApiClient, pre_process, include_check_digit, offline, no_exceed_maximum_retry = false ) {
     
     try {
 
@@ -229,12 +224,8 @@ async function redeem(coupons, tcb_endpoint, access_key, access_token, retailer_
         }
 
         // console.log("redeemParams", tcb_endpoint, redeemParams);
-        const response = await axios.post(`${tcb_endpoint}/retailer/redeem`, redeemParams, {
-            headers: headers
-        });
+        const response = await axiosApiClient.post(`/retailer/redeem`, redeemParams);
         
-        // console.log("response", response.data);
-
         // Convert newly_redeemed to {gs1: "...", purchase_requirement: {}}
         let coupons_adapted = [];
         for ( let i = 0; i < response.data.newly_redeemed.length; i++ ) {
@@ -248,6 +239,8 @@ async function redeem(coupons, tcb_endpoint, access_key, access_token, retailer_
             coupons: coupons_adapted
         };
     } catch (error) {
+
+        console.log("*** error", error);
 
         if ( no_exceed_maximum_retry ) {
             return {
@@ -279,9 +272,7 @@ async function redeem(coupons, tcb_endpoint, access_key, access_token, retailer_
                     redeemParams.retailer_email_domain = retailer_email_domain;
                 }
 
-                let promise = axios.post(`${tcb_endpoint}/retailer/redeem`, redeemParams, {
-                    headers: headers
-                });
+                let promise = axiosApiClient.post(`/retailer/redeem`, redeemParams);
                 
                 promises.push(promise);
             }
@@ -318,7 +309,7 @@ async function redeem(coupons, tcb_endpoint, access_key, access_token, retailer_
 }
 
 
-async function mof_sync ( from_date, to_date, tcb_endpoint, access_key, access_token, redisClient ) {
+async function mof_sync ( from_date, to_date, redisClient, axiosApiClient ) {
 
     try {
         await redisClient.get("TEST_MOF");
@@ -332,13 +323,7 @@ async function mof_sync ( from_date, to_date, tcb_endpoint, access_key, access_t
     
     while (true) {
         try {
-            let response = await axios.get(`${tcb_endpoint}/syncmof/${from_date}/${to_date}/updated?pageNo=${pageNo}`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-access-token': access_token,
-                    'x-api-key': access_key
-                }
-            });
+            let response = await axiosApiClient.get(`/syncmof/${from_date}/${to_date}/updated?pageNo=${pageNo}`);
 
             response = response.data;
             let mof_array = response.data;

@@ -1,15 +1,85 @@
 const Ajv = require("ajv");
 const axios = require("axios");
+const axiosRetry = require('axios-retry').default;
+
 const { INPUT_SCHEMA } = require("./constant");
 const { tcb_process_coupons, mof_sync, redeem } = require("./tcb");
 const { validate_basket_helper } = require("./validate_basket");
 
 const ajv = new Ajv({ allErrors: true });
 
-// Get access token from TCB API
-async function access_token(tcb_endpoint, access_key, secret_key) {
+let redisClient = null;
+function set_redis_client(client) {
+    redisClient = client;
+}
+
+
+let axiosApiClient = null;
+async function configure_api_client(tcb_api_endpoint, http_timeout, no_of_retries, retry_interval) {
+    if ( axiosApiClient !== null) {
+        return axiosApiClient;
+    }
     
-    const response = await axios.post(`${tcb_endpoint}/access_token`, {
+    // Set up Axios instance with retry and timeout
+    const apiClient = axios.create({
+        baseURL: tcb_api_endpoint,
+        timeout: http_timeout, // Timeout for each request (in milliseconds)
+    });
+
+    // Apply retry interceptor to axios instance
+    axiosRetry(apiClient, {
+        retries: no_of_retries, // Number of retries
+        retryDelay: (retryCount) => {
+            return retryCount * retry_interval; // time interval between retries (in milliseconds)
+        },
+        retryCondition: (error) => {
+            // Retry only if the error was due to a network or a 5xx status code
+            return error.code === 'ENOTFOUND' || error.code === 'ECONNABORTED' || axiosRetry.isNetworkOrIdempotentRequestError(error);
+        },
+    });
+
+    axiosApiClient = apiClient;
+}
+
+function redisConfigured() {
+    if (!redisClient) {
+        throw new Error("Redis client is not initialized. Call set_redis_client first.");
+    }
+}
+
+function apiClientConfigured() {
+    if (!axiosApiClient) {
+        throw new Error("API client is not initialized. Call configure_api_client first.");
+    }
+}
+
+function apiTokenConfigured() {
+    if (!axiosApiClient) {
+        throw new Error("API client is not initialized. Call configure_api_client first.");
+    }
+
+    if ( !axiosApiClient.defaults.headers["x-access-token"] || !axiosApiClient.defaults.headers["x-api-key"] ) {
+        throw new Error("API token is not initialized. Call set_access_token first.");
+    }
+}
+
+function set_auth_headers(access_key, access_token) {
+    if (!axiosApiClient) {
+        throw new Error("API client is not initialized. Call configure_api_client first.");
+    }
+
+    axiosApiClient.defaults.headers["x-api-key"] = access_key;
+    axiosApiClient.defaults.headers["x-access-token"] = access_token;
+    axiosApiClient.defaults.headers["Content-Type"] = "application/json";
+}
+
+
+// Get access token from TCB API
+async function set_access_token(access_key, secret_key) {
+
+    apiClientConfigured();
+    
+    const response = await axiosApiClient.post(`/access_token`, {
         access_key: access_key,
         secret_key: secret_key
     }, {
@@ -19,12 +89,16 @@ async function access_token(tcb_endpoint, access_key, secret_key) {
         }
     });
 
+    set_auth_headers(access_key, response.data['x-access-token']);
     return response.data['x-access-token'];
     
 }
 
 // Find applicable coupons and calculate discount_in_cents for each coupon against basket and total discount_in_cents
-async function coupons_valid_for_basket(input, tcb_endpoint, access_key, access_token, retailer_email_domain, redisClient) {
+async function coupons_valid_for_basket(input, retailer_email_domain) {
+
+    apiClientConfigured();
+    apiTokenConfigured();
 
     const validate = ajv.compile(INPUT_SCHEMA);
     const valid = validate(input);
@@ -34,7 +108,7 @@ async function coupons_valid_for_basket(input, tcb_endpoint, access_key, access_
 
     
     // TCB Vlidate with pre_process = yes, include_check_digit = yes, offline = no
-    let { coupons } = await tcb_process_coupons(input.basket, input.coupons, tcb_endpoint, access_key, access_token, retailer_email_domain, redisClient);
+    let { coupons } = await tcb_process_coupons(input.basket, input.coupons, retailer_email_domain, redisClient, axiosApiClient);
     input.coupons = coupons;
 
     // Validate basket and find applicable coupons
@@ -44,27 +118,24 @@ async function coupons_valid_for_basket(input, tcb_endpoint, access_key, access_
 
 }
 
-async function redeem_coupons(coupons, tcb_endpoint, access_key, access_token, retailer_email_domain, offline = "no") {
-    
-    const redeem_response = await redeem(coupons, tcb_endpoint, access_key, access_token, retailer_email_domain, "no", "yes", offline);
+async function redeem_coupons(coupons, retailer_email_domain, offline = "no") {
+
+    apiClientConfigured();
+    apiTokenConfigured();
+    const redeem_response = await redeem(coupons, retailer_email_domain, axiosApiClient, "no", "yes", offline);
     let redeemed_coupons = redeem_response.coupons.map(coupon => coupon.gs1);
     return redeemed_coupons;
     
 }
 
 // Rollback coupons
-async function rollback_coupons(coupons, tcb_endpoint, mode, access_key, access_token) {
-   
-    
+async function rollback_coupons(coupons, mode) {
+
+    apiClientConfigured();
+    apiTokenConfigured();
     let promises = [];
     for (let coupon of coupons) {
-        promises.push(axios.delete(`${tcb_endpoint}/${mode}/rollback/${coupon}`, {
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': access_key,
-                'x-access-token': access_token
-            }
-        }));
+        promises.push(axiosApiClient.delete(`/${mode}/rollback/${coupon}`));
     }
 
     let responses = await Promise.allSettled(promises);
@@ -83,15 +154,21 @@ async function rollback_coupons(coupons, tcb_endpoint, mode, access_key, access_
 }
 
 // get purchase requirements from server and populate local database for faster processing
-async function populate_local_database( from_date, to_date, tcb_endpoint, access_key, access_token, redisClient ) {
-    let mof_synced = await mof_sync(from_date, to_date, tcb_endpoint, access_key, access_token, redisClient);
+async function populate_local_database( from_date, to_date ) {
+
+    redisConfigured();
+    apiClientConfigured();
+    apiTokenConfigured();
+    let mof_synced = await mof_sync(from_date, to_date, redisClient, axiosApiClient);
     return mof_synced;
 }
 
 module.exports = {
-    access_token,
+    set_redis_client,
+    set_access_token,
     coupons_valid_for_basket,
     redeem_coupons,
     rollback_coupons,
-    populate_local_database
+    populate_local_database,
+    configure_api_client
 }
