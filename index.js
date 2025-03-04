@@ -1,11 +1,10 @@
 const Ajv = require("ajv");
 const axios = require("axios");
 const { INPUT_SCHEMA } = require("./constant");
-const { tcb_process_coupons } = require("./tcb");
+const { tcb_process_coupons, mof_sync, redeem } = require("./tcb");
 const { validate_basket_helper } = require("./validate_basket");
 
 const ajv = new Ajv({ allErrors: true });
-
 
 // Get access token from TCB API
 async function access_token(tcb_endpoint, access_key, secret_key) {
@@ -25,7 +24,7 @@ async function access_token(tcb_endpoint, access_key, secret_key) {
 }
 
 // Find applicable coupons and calculate discount_in_cents for each coupon against basket and total discount_in_cents
-async function coupons_valid_for_basket(input, tcb_endpoint, access_key, access_token, retailer_email_domain) {
+async function coupons_valid_for_basket(input, tcb_endpoint, access_key, access_token, retailer_email_domain, redisClient) {
 
     const validate = ajv.compile(INPUT_SCHEMA);
     const valid = validate(input);
@@ -35,34 +34,19 @@ async function coupons_valid_for_basket(input, tcb_endpoint, access_key, access_
 
     
     // TCB Vlidate with pre_process = yes, include_check_digit = yes, offline = no
-    let { coupons } = await tcb_process_coupons(input.coupons, tcb_endpoint, access_key, access_token, retailer_email_domain);
-    
+    let { coupons } = await tcb_process_coupons(input.basket, input.coupons, tcb_endpoint, access_key, access_token, retailer_email_domain, redisClient);
     input.coupons = coupons;
-
-    // Calculate discount_in_cents for each coupon
-    for (let coupon of input.coupons) {
-        let input_with_single_coupon = {
-            basket: input.basket,
-            coupons: [coupon]
-        }
-        let {basket_validation_output} = validate_basket_helper(input_with_single_coupon);
-        coupon.discount_in_cents = basket_validation_output.discount_in_cents;
-    }
-
-    // Sort coupons by discount_in_cents in descending order
-    input.coupons.sort((a, b) => b.discount_in_cents - a.discount_in_cents);
 
     // Validate basket and find applicable coupons
     const {basket_validation_output} = validate_basket_helper(input);
 
-    
     return basket_validation_output;
 
 }
 
-async function redeem_coupons(coupons, tcb_endpoint, access_key, access_token, retailer_email_domain) {
+async function redeem_coupons(coupons, tcb_endpoint, access_key, access_token, retailer_email_domain, offline = "no") {
     
-    const redeem_response = await tcb_process_coupons(coupons, tcb_endpoint, access_key, access_token, retailer_email_domain, "no", "yes", "yes");
+    const redeem_response = await redeem(coupons, tcb_endpoint, access_key, access_token, retailer_email_domain, "no", "yes", offline);
     let redeemed_coupons = redeem_response.coupons.map(coupon => coupon.gs1);
     return redeemed_coupons;
     
@@ -98,9 +82,16 @@ async function rollback_coupons(coupons, tcb_endpoint, mode, access_key, access_
     
 }
 
+// get purchase requirements from server and populate local database for faster processing
+async function populate_local_database( from_date, to_date, tcb_endpoint, access_key, access_token, redisClient ) {
+    let mof_synced = await mof_sync(from_date, to_date, tcb_endpoint, access_key, access_token, redisClient);
+    return mof_synced;
+}
+
 module.exports = {
     access_token,
     coupons_valid_for_basket,
     redeem_coupons,
-    rollback_coupons
+    rollback_coupons,
+    populate_local_database
 }

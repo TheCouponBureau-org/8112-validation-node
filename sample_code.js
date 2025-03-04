@@ -1,10 +1,11 @@
-const { access_token, coupons_valid_for_basket, redeem_coupons, rollback_coupons } = require("pos-validation-sdk");
+const { access_token, coupons_valid_for_basket, redeem_coupons, rollback_coupons } = require(".");
 
 const tcb_endpoint = "https://api.try.thecouponbureau.org";
-const access_key = "...";
-const secret_key = "...";
+const access_key = "e5896b3f738a524882f96998740deaa3";
+const secret_key = "b197a166797f2f38dc73bd9425815823";
 const retailer_email_domain = null; // If you are using accelerator API, pass the retailer email domain
 
+const redisClient = null;
 
 (async() => {
         
@@ -27,7 +28,7 @@ const retailer_email_domain = null; // If you are using accelerator API, pass th
         }
 
         // Get all coupons valid for the basket
-        let basket_validation_output = await coupons_valid_for_basket(input, tcb_endpoint, access_key, token, retailer_email_domain);
+        let basket_validation_output = await coupons_valid_for_basket(input, tcb_endpoint, access_key, token, retailer_email_domain, redisClient);
         console.log("Basket Validation Output", JSON.stringify(basket_validation_output, null, 2));
 
         // Create a new array of coupons which are applied in the basket from the basket_validation_output
