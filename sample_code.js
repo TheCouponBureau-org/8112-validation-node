@@ -28,8 +28,8 @@ const redisClient = new ioredis(redisConnObj);
         // console.log(token);
 
         // Sync local database
-        // const mof_synced = await populate_local_database("2025-01-01", "2025-03-04", tcb_endpoint, access_key, token);
-        // console.log("MOF Synced", mof_synced.length);
+        const mof_synced = await populate_local_database("2025-01-01", "2025-03-04");
+        console.log("MOF Synced", mof_synced.length);
 
         const input = {
             "basket": [

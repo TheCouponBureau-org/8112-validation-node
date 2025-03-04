@@ -52,6 +52,15 @@ app.post("/rollback_coupons", async (req, res) => {
     res.json(rolled_back_coupons);
 });
 
+app.post('/populate_local_database', async (req, res) => {
+    const {from_date, to_date} = req.body;
+    const { access_key, access_token } = req.headers;
+    await configure_api_client(tcb_endpoint, 10000, 3, 1000);
+    set_access_token(access_key, access_token);
+    const mof_synced = await populate_local_database(from_date, to_date);
+    res.json(mof_synced);
+})
+
 app.listen(3000, () => {
     console.log("Server is running on port 3000");
 });
