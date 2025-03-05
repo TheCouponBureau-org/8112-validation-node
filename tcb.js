@@ -211,14 +211,17 @@ async function tcb_process_coupons(basket, coupons, retailer_email_domain, redis
             // Validate in TCB with pre_process = yes, include_check_digit = yes, offline = no
             let tcb_validated_coupons = await redeem(applied_coupons, retailer_email_domain, axiosApiClient, "yes", "yes", "no", false, redisClient);
             
-            // Find the coupons that are not validated by TCB
-            let tcb_not_validated_coupons = coupons.filter(coupon => !tcb_validated_coupons.coupons.some(tcb_coupon => tcb_coupon.gs1 === coupon.gs1));
-            if ( tcb_not_validated_coupons.length > 0 ) {
-                // Some coupons that are applied on the basket is not valid in TCB, remove them from coupons 
-                // and revalidate basket. These coupons are valid for basket as well as tcb validated
-                coupons = coupons.filter(coupon => tcb_validated_coupons.coupons.some(tcb_coupon => tcb_coupon.gs1 === coupon.gs1));
+            console.log("tcb_validated_coupons", tcb_validated_coupons, tcb_validated_coupons.coupons.length);
+            console.log("applied_coupons", applied_coupons.length);
+            console.log("coupons", coupons.length);
+            
+            // if some coupons are not validated by TCB, fallback to pre_process mode (without redis)
+            if ( tcb_validated_coupons.coupons.length < applied_coupons.length ) {
+                return {without_redis: true, coupons: []};
             }
             
+            // filter coupons - if not part of applied_coupons, then remove it from coupons
+            coupons = coupons.filter(coupon => applied_coupons.includes(coupon.gs1));
             return {coupons};
         
     }

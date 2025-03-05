@@ -111,8 +111,13 @@ async function coupons_valid_for_basket(input, retailer_email_domain) {
 
     
     // TCB Vlidate with pre_process = yes, include_check_digit = yes, offline = no
-    let { coupons } = await tcb_process_coupons(input.basket, input.coupons, retailer_email_domain, redisClient, axiosApiClient);
-    input.coupons = coupons;
+    let { coupons, without_redis } = await tcb_process_coupons(input.basket, input.coupons, retailer_email_domain, redisClient, axiosApiClient);
+    if ( without_redis ) {
+        let { coupons } = await tcb_process_coupons(input.basket, input.coupons, retailer_email_domain, null, axiosApiClient);
+        input.coupons = coupons;
+    } else {
+        input.coupons = coupons;
+    }
 
     // Validate basket and find applicable coupons
     const {basket_validation_output} = validate_basket_helper(input);
