@@ -532,7 +532,7 @@ curl -X POST 'http://SERVER_IP/rollback_coupons' \
 
 ## 📦 Hosted Sever
 
-We have hosted the server on AWS. You can use the following link to test the server. Server IP: `54.90.116.172`.
+We have hosted the server on AWS. You can use the following link to test the server. Server IP: `107.21.121.102`.
 
 Use this IP address to test the server from the test commands given above.
 
