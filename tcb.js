@@ -260,18 +260,19 @@ async function redeem(coupons, retailer_email_domain, axiosApiClient, pre_proces
         
         // Convert newly_redeemed to {gs1: "...", purchase_requirement: {}}
         let coupons_adapted = [];
-        for ( let i = 0; i < response.data.newly_redeemed.length; i++ ) {
+        
+        for ( let i = 0; i < response?.data?.newly_redeemed?.length; i++ ) {
             coupons_adapted.push({
-                gs1: response.data.newly_redeemed[i].gs1,
-                purchase_requirement: response.data.master_offer_files[response.data.newly_redeemed[i].master_offer_file]
+                gs1: response?.data?.newly_redeemed[i]?.gs1,
+                purchase_requirement: response?.data?.master_offer_files[response?.data?.newly_redeemed[i]?.master_offer_file]
             });
         }
 
         if ( store_mof_in_redis ) {
             let redisPromises = [];
-            for ( let base_gs1 in response.data.master_offer_files ) {
+            for ( let base_gs1 in response?.data?.master_offer_files ) {
                 console.log("Set MOF in redis", base_gs1);
-                redisPromises.push(redisClient.set(base_gs1, JSON.stringify(response.data.master_offer_files[base_gs1])));
+                redisPromises.push(redisClient.set(base_gs1, JSON.stringify(response?.data?.master_offer_files[base_gs1])));
             }
             await Promise.allSettled(redisPromises);
         }
