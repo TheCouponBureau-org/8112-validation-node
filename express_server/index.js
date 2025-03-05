@@ -19,6 +19,7 @@ let redisConnObj = {
 const redisClient = new ioredis(redisConnObj);
 
 function return_error_response(res, error) {
+    console.log(error);
     if (error.response) {
         delete error.response.data.execution_start_time;
         delete error.response.data.execution_time_in_ms;

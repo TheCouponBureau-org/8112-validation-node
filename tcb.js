@@ -8,7 +8,7 @@ const { validate_basket_helper } = require("./validate_basket");
 // From the list of scanned coupons, resolve fetch code and returns the list of serialized coupons
 // FSI will stay as it is, during fetch code resolution, we will add the purchase requirements to the purchase_requirements object
 // Returns array {gs1: gs1, purchase_requirement: purchase_requirement || null}
-async function get_expanded_coupons(coupons, retailer_email_domain, axiosApiClient) {
+async function get_expanded_coupons(coupons, retailer_email_domain, axiosApiClient, redisClient) {
     // Divide the coupons into serialized coupon, FSI (non serialized) and fetch code array
     let serialized_coupons = [];
     let fetch_code_coupons = [];
@@ -48,16 +48,13 @@ async function get_expanded_coupons(coupons, retailer_email_domain, axiosApiClie
             true,
             redisClient);
 
+        
 
         // If redemption_response is null, it means there is an error in redeem call, 
         // we have to ignore the fetch codes as we could not retrieve the serialized gs1s
-        if ( redemption_response && redemption_response.status === 'success' && redemption_response.newly_redeemed.length > 0 ) {
-            for ( let i=0; i<redemption_response.newly_redeemed.length; i++ ) {
-                serialized_coupons.push({
-                    gs1: redemption_response.newly_redeemed[i].gs1,
-                    purchase_requirement: redemption_response.master_offer_files[redemption_response.newly_redeemed[i].master_offer_file],
-                    tcb_validates: true
-                });
+        if ( redemption_response?.coupons?.length > 0 ) {
+            for ( let i=0; i<redemption_response.coupons.length; i++ ) {
+                serialized_coupons.push(redemption_response.coupons[i]);
             }
         } else if ( redemption_response && redemption_response.status === 'error' && redemption_response.code === 'EXCEED_MAXIMUM' ) {
             // Get returned gs1s which will have more than 15 coupons - but these are serialized coupons not fetch code
@@ -277,7 +274,6 @@ async function redeem(coupons, retailer_email_domain, axiosApiClient, pre_proces
             await Promise.allSettled(redisPromises);
         }
 
-        
         return {
             coupons: coupons_adapted
         };
