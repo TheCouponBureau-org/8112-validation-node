@@ -137,6 +137,9 @@ async function rollback_coupons(coupons, mode) {
 
     apiClientConfigured();
     apiTokenConfigured();
+    if ( mode === undefined ) {
+        mode = "retailer";
+    }
     let promises = [];
     for (let coupon of coupons) {
         promises.push(axiosApiClient.delete(`/${mode}/rollback/${coupon}`));

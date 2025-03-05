@@ -38,22 +38,26 @@ app.post("/coupons_valid_for_basket", async (req, res) => {
 });
 
 app.post("/redeem_coupons", async (req, res) => {
+    const start_time = performance.now();
     const { coupons, retailer_email_domain } = req.body;
     const { access_key, access_token, use_redis } = req.headers;
     await configure_api_client(tcb_endpoint, 10000, 3, 1000);
     set_access_token(access_key, access_token);
     if ( use_redis ) set_redis_client(redisClient);
     const redeemed_coupons = await redeem_coupons(coupons, retailer_email_domain);
-    res.json(redeemed_coupons);
+    const end_time = performance.now();
+    res.json({ redeemed_coupons, time_taken: end_time - start_time });
 });
 
 app.post("/rollback_coupons", async (req, res) => {
+    const start_time = performance.now();
     const { coupons, retailer_email_domain } = req.body;
     const { access_key, access_token } = req.headers;
     await configure_api_client(tcb_endpoint, 10000, 3, 1000);
     set_access_token(access_key, access_token);
     const rolled_back_coupons = await rollback_coupons(coupons, retailer_email_domain);
-    res.json(rolled_back_coupons);
+    const end_time = performance.now();
+    res.json({ rolled_back_coupons, time_taken: end_time - start_time });
 });
 
 app.post('/populate_local_database', async (req, res) => {
