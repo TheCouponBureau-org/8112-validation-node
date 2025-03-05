@@ -255,7 +255,7 @@ async function redeem(coupons, retailer_email_domain, axiosApiClient, pre_proces
             redeemParams.retailer_email_domain = retailer_email_domain;
         }
 
-        console.log("redeemParams", redeemParams);
+        // console.log("redeemParams", redeemParams);
 
         // console.log("redeemParams", tcb_endpoint, redeemParams);
         const response = await axiosApiClient.post(`/retailer/redeem`, redeemParams);
