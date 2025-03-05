@@ -530,6 +530,14 @@ curl -X POST 'http://SERVER_IP/rollback_coupons' \
 ```
 ---
 
+## 📦 Hosted Sever
+
+We have hosted the server on AWS. You can use the following link to test the server. Server IP: `54.90.116.172`.
+
+Use this IP address to test the server from the test commands given above.
+
+---
+
 ## ✅ Conclusion
 
 This document outlines how to use **8112 validation functions** for point-of-sale systems, including **get coupons valid for basket**, **redeem coupons** and **roll back coupons**. For further details, refer to **The Coupon Bureau (TCB) API Documentation**.
