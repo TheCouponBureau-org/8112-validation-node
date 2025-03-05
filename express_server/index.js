@@ -48,7 +48,7 @@ app.post("/coupons_valid_for_basket", async (req, res) => {
         if ( use_redis ) set_redis_client(redisClient);
         const basket_validation_output = await coupons_valid_for_basket(input, retailer_email_domain);
         const end_time = performance.now();
-        res.json({ basket_validation_output, execution_time_in_ms: end_time - start_time });
+        res.json({ basket_validation_output, execution_time_in_ms: Math.round(end_time - start_time) });
     } catch (error) {
         return return_error_response(res, error);
     }
@@ -64,7 +64,7 @@ app.post("/redeem_coupons", async (req, res) => {
         if ( use_redis ) set_redis_client(redisClient);
         const redeemed_coupons = await redeem_coupons(coupons, retailer_email_domain);
         const end_time = performance.now();
-        res.json({ redeemed_coupons, execution_time_in_ms: end_time - start_time });
+        res.json({ redeemed_coupons, execution_time_in_ms: Math.round(end_time - start_time) });
     } catch (error) {
         return return_error_response(res, error);
     }
@@ -79,7 +79,7 @@ app.post("/rollback_coupons", async (req, res) => {
         set_access_token(access_key, access_token);
         const rolled_back_coupons = await rollback_coupons(coupons, retailer_email_domain);
         const end_time = performance.now();
-        res.json({ rolled_back_coupons, execution_time_in_ms: end_time - start_time });
+        res.json({ rolled_back_coupons, execution_time_in_ms: Math.round(end_time - start_time) });
     } catch (error) {
         return return_error_response(res, error);
     }
