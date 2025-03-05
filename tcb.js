@@ -200,9 +200,8 @@ async function get_purchase_requirements(coupons, retailer_email_domain, redisCl
 
 // Returns array {gs1: gs1, base_gs1: base_gs1, purchase_requirement: purchase_requirement || null}
 async function tcb_process_coupons(basket, coupons, retailer_email_domain, redisClient = null, axiosApiClient, pre_process = "yes", include_check_digit = "yes", offline = "no") {
-    
     if ( redisClient ) {
-        try {
+        
             await redisClient.get("TEST_MOF");
             coupons = await get_expanded_coupons(coupons, retailer_email_domain, axiosApiClient, redisClient);
             coupons = await get_purchase_requirements(coupons, retailer_email_domain, redisClient, axiosApiClient); // coupons with purchase requirements
@@ -224,9 +223,7 @@ async function tcb_process_coupons(basket, coupons, retailer_email_domain, redis
             }
             
             return {coupons};
-        } catch ( err ) {
-            throw new Error("Redis connection error");
-        }
+        
     }
     
     // console.log('headers', headers);
@@ -285,7 +282,7 @@ async function redeem(coupons, retailer_email_domain, axiosApiClient, pre_proces
         };
     } catch (error) {
 
-        // console.log("*** error", redeemParams, error.response.data);
+        // console.log("*** error", error);
 
         // console.log("*** redeem error", error);
         if ( error?.response?.data && error.response.data.code === 'EXCEED_MAXIMUM' ) {
@@ -346,10 +343,8 @@ async function redeem(coupons, retailer_email_domain, axiosApiClient, pre_proces
                 coupons: newly_redeemed
             }
             
-        }
-
-        return {
-            coupons: []
+        } else {
+            throw error;
         }
     }
 }
