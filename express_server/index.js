@@ -1,15 +1,18 @@
+const dotenv = require('dotenv');
+dotenv.config();
+
 const express = require("express");
 const ioredis = require('ioredis');
 const { get_access_token, set_access_token, coupons_valid_for_basket, redeem_coupons, rollback_coupons, configure_api_client, set_redis_client, populate_local_database } = require("../index");
 const app = express();
 
-const tcb_endpoint = "https://api.try.thecouponbureau.org";
+const tcb_endpoint = process.env.TBC_ENDPOINT;
 
 app.use(express.json());
 
 let redisConnObj = {
-    host: '127.0.0.1',
-    port: 6379,
+    host: process.env.REDIS_HOST,
+    port: process.env.REDIS_PORT,
 };
 
 // const redisClient = null;

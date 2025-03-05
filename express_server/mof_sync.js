@@ -1,13 +1,16 @@
+const dotenv = require('dotenv');
+dotenv.config();
+
 const ioredis = require('ioredis');
 const { get_access_token, set_access_token, configure_api_client, set_redis_client, populate_local_database } = require("../index");
 
-const tcb_endpoint = "https://api.try.thecouponbureau.org";
-const tcb_access_key = "e5896b3f738a524882f96998740deaa3";
-const tcb_secret_key = "b197a166797f2f38dc73bd9425815823";
+const tcb_endpoint = process.env.TBC_ENDPOINT;
+const tcb_access_key = process.env.TBC_ACCESS_KEY;
+const tcb_secret_key = process.env.TBC_SECRET_KEY;
 
 const redisConnObj = {
-    host: '127.0.0.1',
-    port: 6379,
+    host: process.env.REDIS_HOST,
+    port: process.env.REDIS_PORT,
 };
 
 const redisClient = new ioredis(redisConnObj);
