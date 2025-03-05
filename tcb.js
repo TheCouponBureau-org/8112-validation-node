@@ -376,6 +376,9 @@ async function mof_sync ( from_date, to_date, redisClient, axiosApiClient ) {
             console.log("*** synced", mof_array.length, "mof");
 
             for ( let i = 0; i < mof_array.length; i++ ) {
+                if ( mof_array[i].base_gs1 === '811200998845900001' ) {
+                    console.log("*** mof_array[i]", mof_array[i]);
+                }
                 await redisClient.set(mof_array[i].base_gs1, JSON.stringify(mof_array[i]));
                 mof_synced.push(mof_array[i].base_gs1);
             }
