@@ -166,6 +166,7 @@ async function populate_local_database( from_date, to_date ) {
     redisConfigured();
     apiClientConfigured();
     apiTokenConfigured();
+    console.log("Syncing MOF from", from_date, "to", to_date);
     let mof_synced = await mof_sync(from_date, to_date, redisClient, axiosApiClient);
     return mof_synced;
 }

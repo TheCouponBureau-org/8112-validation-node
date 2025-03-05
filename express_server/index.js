@@ -3,7 +3,7 @@ dotenv.config();
 
 const express = require("express");
 const ioredis = require('ioredis');
-const { get_access_token, set_access_token, coupons_valid_for_basket, redeem_coupons, rollback_coupons, configure_api_client, set_redis_client, populate_local_database } = require("../index");
+const { get_access_token, set_access_token, coupons_valid_for_basket, redeem_coupons, rollback_coupons, configure_api_client, set_redis_client } = require("pos-validation-sdk");
 const app = express();
 
 const tcb_endpoint = process.env.TBC_ENDPOINT;
