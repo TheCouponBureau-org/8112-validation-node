@@ -45,7 +45,8 @@ async function get_expanded_coupons(coupons, retailer_email_domain, axiosApiClie
             "yes", 
             "yes", 
             "no",
-            true);
+            true,
+            redisClient);
 
 
         // If redemption_response is null, it means there is an error in redeem call, 
@@ -86,43 +87,66 @@ async function get_expanded_coupons(coupons, retailer_email_domain, axiosApiClie
 }
 
 // Input {gs1: gs1, purchase_requirement: null} add the actual purchase requirement to the purchase_requirement key
-async function get_purchase_requirements(coupons, redisClient, axiosApiClient) {
+async function get_purchase_requirements(coupons, retailer_email_domain, redisClient, axiosApiClient) {
     
     // Get the purchase requirements from redis
+    
     let missing_purchase_requirements = [];
-    for ( let i=0; i<coupons.length; i++ ) {
-        // parse to check if this is a serialized coupon
+    let redisPromises = [];
+    let redisInputKeys = [];
+    let invalid_coupons = [];
+
+    for (let i = 0; i < coupons.length; i++) {
         let parsed_coupon = null;
-        if ( coupons[i].gs1.indexOf("81122") === 0 ) {
+
+        if (coupons[i].gs1.startsWith("81122")) {
             parsed_coupon = {
-                base_gs1: coupons[i].gs1.slice(0, -4), // remove the last 4 digits (tracking code in 81122 coupons)
+                base_gs1: coupons[i].gs1.slice(0, -4), // Remove last 4 digits (tracking code in 81122 coupons)
                 message: "success"
-            }
+            };
         } else {
             parsed_coupon = parseConsumer8112(coupons[i].gs1);
         }
 
-        if ( parsed_coupon.message === "success" ) {
-            // this is a serialized coupon
-            let purchase_requirement = await redisClient.get(parsed_coupon.base_gs1);
-            
-            if ( purchase_requirement ) {
-                coupons[i].purchase_requirement = JSON.parse(purchase_requirement);
-            }
-        }
-
-        if ( !coupons[i].purchase_requirement ) {
-            missing_purchase_requirements.push(coupons[i]);
+        if (parsed_coupon.message === "success") {
+            coupons[i].base_gs1 = parsed_coupon.base_gs1;
+            redisInputKeys.push(parsed_coupon.base_gs1);
+            redisPromises.push(
+                redisClient.get(parsed_coupon.base_gs1)
+            );
+        } else {
+            invalid_coupons.push(coupons[i]);
         }
     }
 
+    
 
+    // Execute all Redis queries in parallel
+    let redisResponses = await Promise.allSettled(redisPromises);
+    // console.log("redisResponses", redisResponses);
+    for ( let i=0; i<redisResponses.length; i++ ) {
+        if ( redisResponses[i].status === 'fulfilled' ) {
+            // Find all coupons with base_gs1 = redisInputKeys[i]
+            let coupons_with_base_gs1 = coupons.filter(coupon => coupon.base_gs1 === redisInputKeys[i]);
+            for ( let j=0; j<coupons_with_base_gs1.length; j++ ) {
+                coupons_with_base_gs1[j].purchase_requirement = JSON.parse(redisResponses[i].value);
+            }
+        }
+    }
+
+    // Remove invalid coupons from coupons array
+    coupons = coupons.filter(coupon => !invalid_coupons.some(invalid_coupon => invalid_coupon.gs1 === coupon.gs1));
+
+    // Identify missing purchase requirements
+    missing_purchase_requirements = coupons.filter(coupon => !coupon.purchase_requirement);
+    
     // Remove the coupons from coupons array which are not having purchase requirement
     coupons = coupons.filter((coupon) => coupon.purchase_requirement);
 
     // If there are missing purchase requirements, call redemption api with pre_process = yes to get the purchase requirements
     if ( missing_purchase_requirements.length > 0 ) {
         let gs1s_for_redemption_api = missing_purchase_requirements.map(coupon => coupon.gs1);
+
         let redemption_response = null;
 
         try {
@@ -132,8 +156,13 @@ async function get_purchase_requirements(coupons, redisClient, axiosApiClient) {
                 axiosApiClient,
                 "yes",
                 "yes",
-                "no"
+                "no",
+                false,
+                redisClient,
+                true
             );
+
+            // console.log("redemption_response", redemption_response);
 
             // If the redemption_response is null, it means there is an error in redeem call, 
             // we will have to ignore these coupons as we could not retrieve the purchase requirements
@@ -175,8 +204,8 @@ async function tcb_process_coupons(basket, coupons, retailer_email_domain, redis
     if ( redisClient ) {
         try {
             await redisClient.get("TEST_MOF");
-            coupons = await get_expanded_coupons(coupons, retailer_email_domain, axiosApiClient);
-            coupons = await get_purchase_requirements(coupons, redisClient, axiosApiClient); // coupons with purchase requirements
+            coupons = await get_expanded_coupons(coupons, retailer_email_domain, axiosApiClient, redisClient);
+            coupons = await get_purchase_requirements(coupons, retailer_email_domain, redisClient, axiosApiClient); // coupons with purchase requirements
 
             coupons = sort_coupons_by_discount_in_cents(basket, coupons);
             // Get applicable coupons
@@ -184,7 +213,7 @@ async function tcb_process_coupons(basket, coupons, retailer_email_domain, redis
             let applied_coupons = basket_validation_output.applied_coupons.map(coupon => coupon.coupon_code);
 
             // Validate in TCB with pre_process = yes, include_check_digit = yes, offline = no
-            let tcb_validated_coupons = await redeem(applied_coupons, retailer_email_domain, axiosApiClient, "yes", "yes", "no");
+            let tcb_validated_coupons = await redeem(applied_coupons, retailer_email_domain, axiosApiClient, "yes", "yes", "no", false, redisClient);
             
             // Find the coupons that are not validated by TCB
             let tcb_not_validated_coupons = coupons.filter(coupon => !tcb_validated_coupons.coupons.some(tcb_coupon => tcb_coupon.gs1 === coupon.gs1));
@@ -196,20 +225,23 @@ async function tcb_process_coupons(basket, coupons, retailer_email_domain, redis
             
             return {coupons};
         } catch ( err ) {
-            console.log("*** redis error", err);
             throw new Error("Redis connection error");
         }
     }
     
     // console.log('headers', headers);
-    let applied_coupons = await redeem(coupons, retailer_email_domain, axiosApiClient, pre_process, include_check_digit, offline);
+    let applied_coupons = await redeem(coupons, retailer_email_domain, axiosApiClient, pre_process, include_check_digit, offline, false, redisClient);
     applied_coupons = applied_coupons.coupons;
     applied_coupons = sort_coupons_by_discount_in_cents(basket, applied_coupons);
     
     return {coupons: applied_coupons};
 }
 
-async function redeem(coupons, retailer_email_domain, axiosApiClient, pre_process, include_check_digit, offline, no_exceed_maximum_retry = false ) {
+
+
+
+
+async function redeem(coupons, retailer_email_domain, axiosApiClient, pre_process, include_check_digit, offline, no_exceed_maximum_retry = false, redisClient = null, store_mof_in_redis = false ) {
     
     try {
 
@@ -223,8 +255,11 @@ async function redeem(coupons, retailer_email_domain, axiosApiClient, pre_proces
             redeemParams.retailer_email_domain = retailer_email_domain;
         }
 
+        // console.log("redeemParams", redeemParams);
+
         // console.log("redeemParams", tcb_endpoint, redeemParams);
         const response = await axiosApiClient.post(`/retailer/redeem`, redeemParams);
+        // console.log("*** response", response.data);
         
         // Convert newly_redeemed to {gs1: "...", purchase_requirement: {}}
         let coupons_adapted = [];
@@ -234,24 +269,34 @@ async function redeem(coupons, retailer_email_domain, axiosApiClient, pre_proces
                 purchase_requirement: response.data.master_offer_files[response.data.newly_redeemed[i].master_offer_file]
             });
         }
+
+        if ( store_mof_in_redis ) {
+            let redisPromises = [];
+            for ( let base_gs1 in response.data.master_offer_files ) {
+                console.log("Set MOF in redis", base_gs1);
+                redisPromises.push(redisClient.set(base_gs1, JSON.stringify(response.data.master_offer_files[base_gs1])));
+            }
+            await Promise.allSettled(redisPromises);
+        }
+
         
         return {
             coupons: coupons_adapted
         };
     } catch (error) {
 
-        // console.log("*** error", error);
+        // console.log("*** error", redeemParams, error.response.data);
 
-        if ( no_exceed_maximum_retry ) {
-            return {
-                status: "error",
-                code: "EXCEED_MAXIMUM",
-                gs1s: error.response.data.gs1s
-            }
-        }
-        
         // console.log("*** redeem error", error);
         if ( error?.response?.data && error.response.data.code === 'EXCEED_MAXIMUM' ) {
+
+            if ( no_exceed_maximum_retry ) {
+                return {
+                    status: "error",
+                    code: "EXCEED_MAXIMUM",
+                    gs1s: error.response.data.gs1s
+                }
+            }
             
             let gs1s = error.response.data.gs1s;
             let gs1s_chunks = [];
@@ -293,6 +338,7 @@ async function redeem(coupons, retailer_email_domain, axiosApiClient, pre_proces
                         }
                         newly_redeemed = [...newly_redeemed, ...coupons_adapted];
                     }
+
                 }
             }
             
@@ -348,7 +394,7 @@ async function mof_sync ( from_date, to_date, redisClient, axiosApiClient ) {
         }
     }
 
-    return mof_synced;
+    return mof_synced.length;
 
 }
 

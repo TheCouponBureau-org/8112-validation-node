@@ -125,7 +125,8 @@ async function redeem_coupons(coupons, retailer_email_domain, offline = "no") {
 
     apiClientConfigured();
     apiTokenConfigured();
-    const redeem_response = await redeem(coupons, retailer_email_domain, axiosApiClient, "no", "yes", offline);
+    set_redis_client(redisClient);
+    const redeem_response = await redeem(coupons, retailer_email_domain, axiosApiClient, "no", "yes", offline, false, redisClient);
     let redeemed_coupons = redeem_response.coupons.map(coupon => coupon.gs1);
     return redeemed_coupons;
     
