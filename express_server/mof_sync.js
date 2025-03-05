@@ -17,6 +17,6 @@ const redisClient = new ioredis(redisConnObj);
     const token = await get_access_token(tcb_access_key, tcb_secret_key);;
     set_access_token(tcb_access_key, token);
     set_redis_client(redisClient);
-    await populate_local_database("2025-01-01", "2025-01-31");
+    await populate_local_database("2025-05-01", "2025-01-31");
     process.exit(0);
 })();
