@@ -22,7 +22,10 @@ const redisClient = new ioredis(redisConnObj);
     set_redis_client(redisClient);
 
     // Check if the database is synched once, if not, sync last 6 months data else last 2 days data
-    const last_synced_date = await redisClient.get("LAST_SYNCED_DATE");
+    let last_synced_date = await redisClient.get("LAST_SYNCED_DATE");
+    if ( process.env.FULL_SYNC === "yes" ) {
+        last_synced_date = null;
+    }
     if (!last_synced_date) {
         let six_months_ago = new Date();
         six_months_ago.setMonth(six_months_ago.getMonth() - 6);
