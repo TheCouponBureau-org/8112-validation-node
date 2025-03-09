@@ -26,7 +26,7 @@ function validate_basket_helper(basket_validation_input) {
         }
         let new_basket_total_price = 0;
         new_basket.map(item => {
-            new_basket_total_price += item.price * 100;
+            new_basket_total_price += item.price * item.quantity * 100;
         });
         // check if basket meets requirements
         let {status, basket_items, units_to_purchase, units_to_purchase2, units_to_purchase3} = meets_requirements(new_basket, coupon);
@@ -73,7 +73,7 @@ function get_discount_in_cents(coupon, basket_items, has_only_primary_purchase, 
         if(applies_to_which_item >= 0) {
             //coupon is not valid if total basket price is less than save value
             if(new_basket_total_price < discount_in_cents) {
-                // discount_in_cents = qualifying_purchase_price;
+                //discount_in_cents = qualifying_purchase_price;
                 return -1;
             }
 
@@ -87,23 +87,26 @@ function get_discount_in_cents(coupon, basket_items, has_only_primary_purchase, 
                        }
                     });
                     return found;
+                    
                 });
             }
             let qualifying_purchase_price = 0;
             new_basket_items.map(item => {
-                qualifying_purchase_price += item.price * 100;
+                qualifying_purchase_price += item.price * item.quantity * 100;
             });
+
             if(qualifying_purchase_price < discount_in_cents) {
-                discount_in_cents = qualifying_purchase_price;
+                discount_in_cents = 0;
             }
 
             if(consumed_basket.length > 0) {
                 let consumed_basket_price = 0;
                 consumed_basket.map(item => {
-                    consumed_basket_price += item.price * 100;
+                    consumed_basket_price += item.price * item.quantity * 100;
                 });
+                
                 if(consumed_basket_price < discount_in_cents) {
-                    discount_in_cents = consumed_basket_price;
+                    discount_in_cents = 0;
                 }
             }
         }
