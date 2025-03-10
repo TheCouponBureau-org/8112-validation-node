@@ -14,6 +14,7 @@ function validate_basket_helper(basket_validation_input) {
     };
 
     let new_basket = basket;
+
     let not_all_coupons_consumed = false;
     let index = 0;
 
@@ -28,6 +29,7 @@ function validate_basket_helper(basket_validation_input) {
         new_basket.map(item => {
             new_basket_total_price += item.price * item.quantity * 100;
         });
+
         // check if basket meets requirements
         let {status, basket_items, units_to_purchase, units_to_purchase2, units_to_purchase3} = meets_requirements(new_basket, coupon);
         if(status) {
@@ -39,6 +41,7 @@ function validate_basket_helper(basket_validation_input) {
             const old_basket_units = basket_units(new_basket);
             const reduced_basket = reduce_basket(new_basket, basket_items, {units_to_purchase, units_to_purchase2, units_to_purchase3});
             const consumed_basket = reduced_basket.consumed_basket;
+
             discount_in_cents = get_discount_in_cents(coupon, basket_items, has_only_primary_purchase, new_basket_total_price, consumed_basket);
             new_basket = reduced_basket.new_basket;
             const new_basket_units = basket_units(new_basket);
@@ -356,14 +359,13 @@ function meets_requirements(basket, coupon) {
             basket_items3 = basket_items;
             units_to_purchase3 = units_to_purchase;
         }
-        if(status2) {
+        if(status2 || status3) {
             basket_items2 = basket_items2?.map(item => {
                 return {
                     ...item,
                     purchase_type: "second_purchase"
                 };
             });
-        } else if(status3) {
             basket_items3 = basket_items3?.map(item => {
                 return {
                     ...item,
@@ -373,7 +375,11 @@ function meets_requirements(basket, coupon) {
         } else {
             return NEGATIVE_STATUS;
         }
-        const basket_items_final = basket_items1.concat(basket_items2 || []).concat(basket_items3 || []);
+
+        const basket_items_final = basket_items1.concat(
+            status2 ? basket_items2 : status3 ? basket_items3 : []
+        );
+
         // units_to_purchase1 += get_additional_units_to_purchase(basket_items_final, units_to_purchase1, primary_purchase);
         // if(status2)
         //     units_to_purchase2 += get_additional_units_to_purchase(basket_items_final, units_to_purchase2, second_purchase);
