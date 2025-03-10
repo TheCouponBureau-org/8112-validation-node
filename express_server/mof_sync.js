@@ -27,10 +27,10 @@ const redisClient = new ioredis(redisConnObj);
         last_synced_date = null;
     }
     if (!last_synced_date) {
-        let six_months_ago = new Date();
-        six_months_ago.setMonth(six_months_ago.getMonth() - 6);
+        let one_year_ago = new Date();
+        one_year_ago.setMonth(one_year_ago.getMonth() - 12);
         console.log("Syncing last 6 months data");
-        await populate_local_database(six_months_ago.toISOString().split('T')[0], new Date().toISOString().split('T')[0]);
+        await populate_local_database(one_year_ago.toISOString().split('T')[0], new Date().toISOString().split('T')[0]);
     } else {
         console.log("Syncing last 2 days data");
         let two_days_ago = new Date();
