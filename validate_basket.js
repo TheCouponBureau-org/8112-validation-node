@@ -34,7 +34,7 @@ function validate_basket_helper(basket_validation_input) {
             const has_only_primary_purchase = !units_to_purchase2 && !units_to_purchase3;
             let discount_in_cents = get_discount_in_cents(coupon, basket_items, has_only_primary_purchase, new_basket_total_price, []);
             //in case discount_in_cents < 0, coupon is not applicable
-            if(discount_in_cents < 0)
+            if(discount_in_cents <= 0)
                 return;
             const old_basket_units = basket_units(new_basket);
             const reduced_basket = reduce_basket(new_basket, basket_items, {units_to_purchase, units_to_purchase2, units_to_purchase3});
@@ -98,13 +98,13 @@ function get_discount_in_cents(coupon, basket_items, has_only_primary_purchase, 
             if(qualifying_purchase_price < discount_in_cents) {
                 discount_in_cents = 0;
             }
-
+            
             if(consumed_basket.length > 0) {
                 let consumed_basket_price = 0;
                 consumed_basket.map(item => {
                     consumed_basket_price += item.price * item.quantity * 100;
                 });
-                
+
                 if(consumed_basket_price < discount_in_cents) {
                     discount_in_cents = 0;
                 }
