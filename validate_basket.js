@@ -13,8 +13,7 @@ function validate_basket_helper(basket_validation_input) {
         applied_coupons: []
     };
 
-    let new_basket = basket;
-
+    let new_basket = mergeBasketItems(basket);
     let not_all_coupons_consumed = false;
     let index = 0;
 
@@ -73,13 +72,12 @@ function get_discount_in_cents(coupon, basket_items, has_only_primary_purchase, 
     let discount_in_cents = 0;
     if(save_value_code === 0) {
         discount_in_cents = coupon.purchase_requirement.primary_purchase_save_value;
-        if(applies_to_which_item >= 0) {
+        if(applies_to_which_item >= 0 || applies_to_which_item === undefined) {
             //coupon is not valid if total basket price is less than save value
             if(new_basket_total_price < discount_in_cents) {
                 //discount_in_cents = qualifying_purchase_price;
                 return -1;
             }
-
             let new_basket_items = applicable_basket_items(basket_items, applies_to_which_item);
             if(consumed_basket.length > 0) {
                 new_basket_items = new_basket_items.filter((new_basket_item) => {
@@ -149,7 +147,7 @@ function get_discount_in_cents(coupon, basket_items, has_only_primary_purchase, 
 
 function applicable_basket_items(basket_items, applies_to_which_item) {
     let new_basket_items = [];
-    if(applies_to_which_item === 0) {
+    if(applies_to_which_item === 0 || applies_to_which_item === undefined) {
         new_basket_items = basket_items;
     } else if(applies_to_which_item === 1) {
         new_basket_items = basket_items.filter(item => item.purchase_type === "second_purchase");
@@ -359,13 +357,14 @@ function meets_requirements(basket, coupon) {
             basket_items3 = basket_items;
             units_to_purchase3 = units_to_purchase;
         }
-        if(status2 || status3) {
+        if(status2) {
             basket_items2 = basket_items2?.map(item => {
                 return {
                     ...item,
                     purchase_type: "second_purchase"
                 };
             });
+        } else if(status3) {
             basket_items3 = basket_items3?.map(item => {
                 return {
                     ...item,
@@ -644,6 +643,28 @@ function get_purchases(purchase_requirement) {
     }
 }
 
+// Function to merge same product codes
+function mergeBasketItems(basket) {
+    let mergedBasket = {};
+
+    basket.forEach(item => {
+        let key = `${item.product_code}-${item.price.toFixed(2)}`; // Unique key with formatted price
+        if (mergedBasket[key]) {
+            mergedBasket[key].quantity += item.quantity; // Merge quantity
+        } else {
+            mergedBasket[key] = { 
+                product_code: item.product_code, 
+                price: parseFloat(item.price.toFixed(2)), // Keep price in decimal format
+                quantity: item.quantity, 
+                unit: item.unit 
+            };
+        }
+    });
+
+    return Object.values(mergedBasket); // Convert merged object back to array
+}
+
+    
 module.exports = {
     validate_basket_helper
 }
