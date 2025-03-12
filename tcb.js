@@ -237,7 +237,7 @@ async function tcb_process_coupons(basket, coupons, retailer_email_domain, redis
                 }
             }
             
-
+            coupons = sort_coupons_by_discount_in_cents(basket, coupons);
             return {coupons};
         
     }
@@ -245,7 +245,7 @@ async function tcb_process_coupons(basket, coupons, retailer_email_domain, redis
     // console.log('headers', headers);
     let applied_coupons = await redeem(coupons, retailer_email_domain, axiosApiClient, pre_process, include_check_digit, offline, false, redisClient);
     applied_coupons = applied_coupons.coupons;
-    // applied_coupons = sort_coupons_by_discount_in_cents(basket, applied_coupons);
+    applied_coupons = sort_coupons_by_discount_in_cents(basket, applied_coupons);
     
     return {coupons: applied_coupons};
 }
