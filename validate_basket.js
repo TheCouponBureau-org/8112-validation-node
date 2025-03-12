@@ -40,7 +40,7 @@ function validate_basket_helper(basket_validation_input) {
             const old_basket_units = basket_units(new_basket);
             const reduced_basket = reduce_basket(new_basket, basket_items, {units_to_purchase, units_to_purchase2, units_to_purchase3});
             const consumed_basket = reduced_basket.consumed_basket;
-
+            
             discount_in_cents = get_discount_in_cents(coupon, basket_items, has_only_primary_purchase, new_basket_total_price, consumed_basket);
             new_basket = reduced_basket.new_basket;
             const new_basket_units = basket_units(new_basket);
@@ -324,7 +324,7 @@ function meets_requirements(basket, coupon) {
                 purchase_type: "third_purchase"
             };
         });
-        const basket_items_final = basket_items1.concat(basket_items2 || []).concat(basket_items3 || []);
+        const basket_items_final = reorderSubBasket(basket, basket_items1.concat(basket_items2 || []).concat(basket_items3 || []));
         // units_to_purchase1 += get_additional_units_to_purchase(basket_items_final, units_to_purchase1, primary_purchase);
         // units_to_purchase2 += get_additional_units_to_purchase(basket_items_final, units_to_purchase2, second_purchase);
         // units_to_purchase3 += get_additional_units_to_purchase(basket_items_final, units_to_purchase3, third_purchase);
@@ -375,10 +375,9 @@ function meets_requirements(basket, coupon) {
             return NEGATIVE_STATUS;
         }
 
-        const basket_items_final = basket_items1.concat(
+        const basket_items_final = reorderSubBasket(basket, basket_items1.concat(
             status2 ? basket_items2 : status3 ? basket_items3 : []
-        );
-
+        ));
         // units_to_purchase1 += get_additional_units_to_purchase(basket_items_final, units_to_purchase1, primary_purchase);
         // if(status2)
         //     units_to_purchase2 += get_additional_units_to_purchase(basket_items_final, units_to_purchase2, second_purchase);
@@ -662,6 +661,21 @@ function mergeBasketItems(basket) {
     });
 
     return Object.values(mergedBasket); // Convert merged object back to array
+}
+
+function reorderSubBasket(mainBasket, subBasket) {
+    // Create a map of product_code indexes from the main basket
+    const orderMap = new Map();
+    mainBasket.forEach((item, index) => {
+        orderMap.set(item.product_code, index);
+    });
+
+    // Sort the sub basket based on the main basket order
+    subBasket.sort((a, b) => {
+        return (orderMap.get(a.product_code) ?? Infinity) - (orderMap.get(b.product_code) ?? Infinity);
+    });
+
+    return subBasket;
 }
 
     
