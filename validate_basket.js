@@ -147,8 +147,10 @@ function get_discount_in_cents(coupon, basket_items, has_only_primary_purchase, 
 
 function applicable_basket_items(basket_items, applies_to_which_item) {
     let new_basket_items = [];
-    if(applies_to_which_item === 0 || applies_to_which_item === undefined) {
+    if(applies_to_which_item === undefined) {
         new_basket_items = basket_items;
+    } else if (applies_to_which_item === 0) {
+        new_basket_items = basket_items.filter(item => !item.purchase_type);
     } else if(applies_to_which_item === 1) {
         new_basket_items = basket_items.filter(item => item.purchase_type === "second_purchase");
     } else if(applies_to_which_item === 2) {
