@@ -221,7 +221,23 @@ async function tcb_process_coupons(basket, coupons, retailer_email_domain, redis
             }
             
             // filter coupons - if not part of applied_coupons, then remove it from coupons
-            coupons = coupons.filter(coupon => applied_coupons.includes(coupon.gs1));
+            // coupons = coupons.filter(coupon => applied_coupons.includes(coupon.gs1));
+
+            for ( let i=0; i<coupons.length; i++ ) {
+                if ( coupons[i].gs1.startsWith("81122") && coupons[i].gs1.length < 30 ) { // <30 ensures that this is non serialized
+                    // Replace this 81122<tracking_code> with the actual generated gs1
+                    let base_gs1 = coupons[i].gs1.slice(0, -4);
+                    for ( let j=0; j<tcb_validated_coupons.coupons.length; j++ ) {
+                        if ( tcb_validated_coupons.coupons[j].gs1.indexOf(base_gs1 + "9") === 0 && tcb_validated_coupons.coupons[j].already_used === undefined ) { // As we are generating 15 digit consumer code, next digit will be 9
+                            coupons[i].gs1 = tcb_validated_coupons.coupons[j].gs1;
+                            tcb_validated_coupons.coupons[j].already_used = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+
             return {coupons};
         
     }
@@ -229,7 +245,7 @@ async function tcb_process_coupons(basket, coupons, retailer_email_domain, redis
     // console.log('headers', headers);
     let applied_coupons = await redeem(coupons, retailer_email_domain, axiosApiClient, pre_process, include_check_digit, offline, false, redisClient);
     applied_coupons = applied_coupons.coupons;
-    applied_coupons = sort_coupons_by_discount_in_cents(basket, applied_coupons);
+    // applied_coupons = sort_coupons_by_discount_in_cents(basket, applied_coupons);
     
     return {coupons: applied_coupons};
 }
