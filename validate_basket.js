@@ -272,21 +272,27 @@ function meets_requirements(basket, coupon) {
         const purchase_types = ["", "second_purchase", "third_purchase"];
 
         if (applies_to_which_item === undefined) {
-            for (let i = 0; i < purchases.length; i++) {
-                const purchase = purchases[i];
-                if (purchase?.req_code !== undefined && purchase?.requirements !== undefined) {
-                    let { status, basket_items, units_to_purchase } = meets_purchase_requirements(coupon, basket, purchase, false);
-                    if (status) {
-                        if (i > 0) {
-                            basket_items = basket_items?.map(item => ({ ...item, purchase_type: purchase_types[i] }));
+            for (let basket_item of basket) {
+                for (let i = 0; i < purchases.length; i++) {
+                    const purchase = purchases[i];
+                    if (purchase?.req_code !== undefined && purchase?.requirements !== undefined) {
+                        let { status, basket_items, units_to_purchase } = meets_purchase_requirements(coupon, basket, purchase, true);
+                        // Check if the current basket item is part of the basket_items that satisfy the condition
+                        if (status && basket_items.some(item => item.product_code === basket_item.product_code)) {
+                            if (i > 0) {
+                                basket_items = basket_items?.map(item => ({
+                                    ...item,
+                                    purchase_type: purchase_types[i]
+                                }));
+                            }
+                            return {
+                                status,
+                                basket_items,
+                                ...(i === 0 && { units_to_purchase }),
+                                ...(i === 1 && { units_to_purchase2: units_to_purchase }),
+                                ...(i === 2 && { units_to_purchase3: units_to_purchase })
+                            };
                         }
-                        return {
-                            status,
-                            basket_items,
-                            ...(i === 0 && { units_to_purchase }),
-                            ...(i === 1 && { units_to_purchase2: units_to_purchase }),
-                            ...(i === 2 && { units_to_purchase3: units_to_purchase })
-                        };
                     }
                 }
             }
