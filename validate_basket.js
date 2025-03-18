@@ -279,19 +279,23 @@ function meets_requirements(basket, coupon) {
                         let { status, basket_items, units_to_purchase } = meets_purchase_requirements(coupon, basket, purchase, true);
                         // Check if the current basket item is part of the basket_items that satisfy the condition
                         if (status && basket_items.some(item => item.product_code === basket_item.product_code)) {
-                            if (i > 0) {
-                                basket_items = basket_items?.map(item => ({
-                                    ...item,
-                                    purchase_type: purchase_types[i]
-                                }));
-                            }
-                            return {
-                                status,
-                                basket_items,
-                                ...(i === 0 && { units_to_purchase }),
-                                ...(i === 1 && { units_to_purchase2: units_to_purchase }),
-                                ...(i === 2 && { units_to_purchase3: units_to_purchase })
-                            };
+                            // Calculate the total sum
+                            const totalValue = basketValue(basket_items);
+                            if(primary_purchase.save_value < totalValue) {
+                                if (i > 0) {
+                                    basket_items = basket_items?.map(item => ({
+                                        ...item,
+                                        purchase_type: purchase_types[i]
+                                    }));
+                                }
+                                return {
+                                    status,
+                                    basket_items,
+                                    ...(i === 0 && { units_to_purchase }),
+                                    ...(i === 1 && { units_to_purchase2: units_to_purchase }),
+                                    ...(i === 2 && { units_to_purchase3: units_to_purchase })
+                                };
+                            }  
                         }
                     }
                 }
@@ -708,6 +712,13 @@ function reorderSubBasket(mainBasket, subBasket) {
     });
 
     return subBasket;
+}
+
+function basketValue(basket) {
+    const totalValue = basket.reduce((sum, item) => {
+        return sum + item.price * item.quantity * 100;
+    }, 0);
+    return totalValue;
 }
 
     
