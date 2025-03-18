@@ -43,6 +43,7 @@ function validate_basket_helper(basket_validation_input) {
             
             discount_in_cents = get_discount_in_cents(coupon, basket_items, has_only_primary_purchase, new_basket_total_price, consumed_basket);
             new_basket = reduced_basket.new_basket;
+            
             const new_basket_units = basket_units(new_basket);
             basket_validation_output.applied_coupons.push({
                 coupon_code: coupon.gs1,
@@ -262,33 +263,56 @@ function meets_requirements(basket, coupon) {
     // const save_value_code = save_value_code1 || 0;
 
     if(additional_purchase_rules_code === undefined || additional_purchase_rules_code === null) {
-        let {status, basket_items, units_to_purchase} =  meets_purchase_requirements(basket, primary_purchase, true);
+        let {status, basket_items, units_to_purchase} =  meets_purchase_requirements(coupon, basket, primary_purchase, true);
         // units_to_purchase += get_additional_units_to_purchase(basket_items, units_to_purchase, primary_purchase);
         return {status, basket_items, units_to_purchase};
     }
     else if (additional_purchase_rules_code === 0) {
-        let {status, basket_items, units_to_purchase} = meets_purchase_requirements(basket, primary_purchase, false);
-        if(status) {
-            // units_to_purchase += get_additional_units_to_purchase(basket_items, units_to_purchase, primary_purchase);
-            return {status, basket_items, units_to_purchase}
-        }
-        if(second_purchase.req_code !== undefined && second_purchase.requirements !== undefined) {
-            let {status, basket_items, units_to_purchase} = meets_purchase_requirements(basket, second_purchase, false);
-            if(status) {
-                // units_to_purchase += get_additional_units_to_purchase(basket_items, units_to_purchase, second_purchase);
-                return {status, basket_items, units_to_purchase}
+        const purchases = [primary_purchase, second_purchase, third_purchase];
+        const purchase_types = ["", "second_purchase", "third_purchase"];
+
+        if (applies_to_which_item === undefined) {
+            for (let i = 0; i < purchases.length; i++) {
+                const purchase = purchases[i];
+                if (purchase?.req_code !== undefined && purchase?.requirements !== undefined) {
+                    let { status, basket_items, units_to_purchase } = meets_purchase_requirements(coupon, basket, purchase, false);
+                    if (status) {
+                        if (i > 0) {
+                            basket_items = basket_items?.map(item => ({ ...item, purchase_type: purchase_types[i] }));
+                        }
+                        return {
+                            status,
+                            basket_items,
+                            ...(i === 0 && { units_to_purchase }),
+                            ...(i === 1 && { units_to_purchase2: units_to_purchase }),
+                            ...(i === 2 && { units_to_purchase3: units_to_purchase })
+                        };
+                    }
+                }
+            }
+        } else if (applies_to_which_item >= 0 && applies_to_which_item <= 2) {
+            const purchase = purchases[applies_to_which_item];
+            if (purchase?.req_code !== undefined && purchase?.requirements !== undefined) {
+                let { status, basket_items, units_to_purchase } = meets_purchase_requirements(coupon, basket, purchase, true);
+                if (status) {
+                    if (applies_to_which_item > 0) {
+                        basket_items = basket_items?.map(item => ({ ...item, purchase_type: purchase_types[applies_to_which_item] }));
+                    }
+                    // Dynamically assign correct units_to_purchase based on applies_to_which_item
+                    return {
+                        status,
+                        basket_items,
+                        ...(applies_to_which_item === 0 && { units_to_purchase }),
+                        ...(applies_to_which_item === 1 && { units_to_purchase2: units_to_purchase }),
+                        ...(applies_to_which_item === 2 && { units_to_purchase3: units_to_purchase })
+                    };
+                }
             }
         }
-        if(third_purchase.req_code !== undefined && third_purchase.requirements !== undefined) {
-            let {status, basket_items, units_to_purchase} = meets_purchase_requirements(basket, third_purchase, false);
-            if(status) {
-                // units_to_purchase += get_additional_units_to_purchase(basket_items, units_to_purchase, third_purchase);
-                return {status, basket_items, units_to_purchase}
-            }
-        }
-    } else if (additional_purchase_rules_code === 1) {
+    } 
+    else if (additional_purchase_rules_code === 1) {
         let basket_items1, units_to_purchase1;
-        let {status, basket_items, units_to_purchase} = meets_purchase_requirements(basket, primary_purchase, false);
+        let {status, basket_items, units_to_purchase} = meets_purchase_requirements(coupon, basket, primary_purchase, false);
         if(!status) {
             return NEGATIVE_STATUS;
         }
@@ -297,7 +321,7 @@ function meets_requirements(basket, coupon) {
 
         let basket_items2, units_to_purchase2;
         if(second_purchase.req_code !== undefined && second_purchase.requirements !== undefined) {
-            let {status, basket_items, units_to_purchase} = meets_purchase_requirements(basket, second_purchase, false);
+            let {status, basket_items, units_to_purchase} = meets_purchase_requirements(coupon, basket, second_purchase, false);
             if(!status) {
                 return NEGATIVE_STATUS;
             }
@@ -307,7 +331,7 @@ function meets_requirements(basket, coupon) {
 
         let basket_items3, units_to_purchase3;
         if(third_purchase.req_code !== undefined && third_purchase.requirements !== undefined) {
-            let {status, basket_items, units_to_purchase} = meets_purchase_requirements(basket, third_purchase, false);
+            let {status, basket_items, units_to_purchase} = meets_purchase_requirements(coupon, basket, third_purchase, false);
             if(!status) {
                 return NEGATIVE_STATUS;
             }
@@ -338,7 +362,7 @@ function meets_requirements(basket, coupon) {
         };
     } else if (additional_purchase_rules_code === 2) {
         let basket_items1, units_to_purchase1;
-        let {status, basket_items, units_to_purchase} = meets_purchase_requirements(basket, primary_purchase, false);
+        let {status, basket_items, units_to_purchase} = meets_purchase_requirements(coupon, basket, primary_purchase, false);
         if(!status) {
             return NEGATIVE_STATUS;
         }
@@ -347,14 +371,14 @@ function meets_requirements(basket, coupon) {
 
         let status2, basket_items2, units_to_purchase2;
         if(second_purchase.req_code !== undefined && second_purchase.requirements !== undefined) {
-            let {status, basket_items, units_to_purchase} = meets_purchase_requirements(basket, second_purchase, false);
+            let {status, basket_items, units_to_purchase} = meets_purchase_requirements(coupon, basket, second_purchase, false);
             status2 = status;
             basket_items2 = basket_items;
             units_to_purchase2 = units_to_purchase;
         }
         let status3, basket_items3, units_to_purchase3;
         if(third_purchase.req_code !== undefined && third_purchase.requirements !== undefined) {
-            let {status, basket_items, units_to_purchase} = meets_purchase_requirements(basket, third_purchase, false);
+            let {status, basket_items, units_to_purchase} = meets_purchase_requirements(coupon, basket, third_purchase, false);
             status3 = status;
             basket_items3 = basket_items;
             units_to_purchase3 = units_to_purchase;
@@ -395,7 +419,7 @@ function meets_requirements(basket, coupon) {
     return NEGATIVE_STATUS;
 }
 
-function get_additional_units_to_purchase(basket_items, units_to_purchase, purchase) {
+function get_additional_units_to_purchase(coupon, basket_items, units_to_purchase, purchase) {
     if(purchase.req_code === 0) {
         let total_price_units_to_purchase = 0;
         let count = 0;
@@ -405,7 +429,7 @@ function get_additional_units_to_purchase(basket_items, units_to_purchase, purch
                 if(count < units_to_purchase) {
                     total_price_units_to_purchase += (item.price * 100);
                 } else {
-                    if(purchase.save_value > total_price_units_to_purchase) {
+                    if(coupon.purchase_requirement.primary_purchase_save_value > total_price_units_to_purchase) {
                         additional_units_to_purchase++;
                         total_price_units_to_purchase += (item.price * 100);
                     }
@@ -418,13 +442,13 @@ function get_additional_units_to_purchase(basket_items, units_to_purchase, purch
     return 0;
 }
 
-function meets_purchase_requirements(basket, purchase, apply_additional_units) {
+function meets_purchase_requirements(coupon, basket, purchase, apply_additional_units) {
     let units_to_purchase = 0;
     if(purchase.req_code === 0) {
         units_to_purchase = purchase.requirements;
         const {status, basket_items} = basket_has_units_to_purchase(basket, units_to_purchase, purchase);
         if(apply_additional_units)
-            units_to_purchase += get_additional_units_to_purchase(basket_items, units_to_purchase, purchase);
+            units_to_purchase += get_additional_units_to_purchase(coupon, basket_items, units_to_purchase, purchase);
         return {status, basket_items, units_to_purchase};
     } else if(purchase.req_code === 1) {
         let cash_value_total_transaction = 0;
