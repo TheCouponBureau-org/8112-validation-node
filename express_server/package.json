@@ -1,10 +1,10 @@
 {
-  "name": "express_server",
+  "name": "pos-validation-sdk",
   "version": "1.0.0",
-  "description": "",
+  "description": "POS Validation SDK Server",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js"
   },
   "keywords": [],
   "author": "",
