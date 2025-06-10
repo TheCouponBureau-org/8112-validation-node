@@ -206,6 +206,11 @@ async function tcb_process_coupons(basket, coupons, retailer_email_domain, redis
             coupons = sort_coupons_by_discount_in_cents(basket, coupons);
             // Get applicable coupons
             let {basket_validation_output} = validate_basket_helper({ basket: basket, coupons: coupons });
+            // Check if applied_coupons is empty
+            if (basket_validation_output.applied_coupons.length === 0) {
+                return {coupons: basket_validation_output.applied_coupons};
+            }
+            
             let applied_coupons = basket_validation_output.applied_coupons.map(coupon => coupon.coupon_code);
 
             // Validate in TCB with pre_process = yes, include_check_digit = yes, offline = no

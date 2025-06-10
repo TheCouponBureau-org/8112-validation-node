@@ -26,7 +26,7 @@ function parseConsumer8112 (gs1) {
       return result;
     }
     if (gs1.length > config.max_consumergs1_length_8112) {
-      result.message = "GS1 Parse Error: cannot exceed 36 digits";
+      result.message = "GS1 Parse Error: cannot exceed 40 digits";
       return result;
     }
 
@@ -111,7 +111,7 @@ function parseConsumer8112 (gs1) {
 exports.parseConsumer8112 = parseConsumer8112;
 const config = {
     max_basegs1_length_8112: 24,
-    max_consumergs1_length_8112: 36
+    max_consumergs1_length_8112: 40
 };
 
 const isNullOrUndefined = (value) => {
