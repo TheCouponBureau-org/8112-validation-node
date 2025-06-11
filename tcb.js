@@ -210,7 +210,7 @@ async function tcb_process_coupons(basket, coupons, retailer_email_domain, redis
             if (basket_validation_output.applied_coupons.length === 0) {
                 return {coupons: basket_validation_output.applied_coupons};
             }
-            
+
             let applied_coupons = basket_validation_output.applied_coupons.map(coupon => coupon.coupon_code);
 
             // Validate in TCB with pre_process = yes, include_check_digit = yes, offline = no
@@ -398,7 +398,7 @@ async function mof_sync ( from_date, to_date, redisClient, axiosApiClient ) {
 
             for ( let i = 0; i < mof_array.length; i++ ) {
                 if ( mof_array[i].base_gs1 === '811200998845900001' ) {
-                    console.log("*** mof_array[i]", mof_array[i]);
+                    console.log("*** mof_array["+i+"]", mof_array[i]);
                 }
                 await redisClient.set(mof_array[i].base_gs1, JSON.stringify(mof_array[i]));
                 mof_synced.push(mof_array[i].base_gs1);
