@@ -1,6 +1,6 @@
 {
   "name": "pos-validation-sdk",
-  "version": "1.2.4",
+  "version": "1.2.6",
   "description": "POS validation SDK for (AI) 8112",
   "main": "index.js",
   "scripts": {
