@@ -80,7 +80,7 @@ kubectl run curltest --rm -it --restart=Never -n coupon-app --image=curlimages/c
 # Build correct amd64 image with latest fix
 docker buildx build \
   --platform linux/amd64 \
-  -t docker.io/thecouponbureau/pos-validation-sdk:v7 \
+  -t docker.io/thecouponbureau/pos-validation-sdk:v9 \
   --push \
   ./express_server
 
@@ -88,7 +88,7 @@ docker buildx build \
 helm upgrade --install coupon-api ./helm/pos-validation-sdk \
   -n coupon-app \
   --set image.repository=docker.io/thecouponbureau/pos-validation-sdk \
-  --set image.tag=v7 \
+  --set image.tag=v9 \
   --wait --timeout 10m
 
 # Verify
