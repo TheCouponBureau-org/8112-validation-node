@@ -1,0 +1,30 @@
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: coupon-api-cert
+  namespace: coupon-app
+spec:
+  domains:
+    - api.pos.thecouponbureau.org
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: coupon-api-ingress
+  namespace: coupon-app
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: "coupon-api-ip"
+    networking.gke.io/managed-certificates: "coupon-api-cert"
+spec:
+  rules:
+    - host: api.pos.thecouponbureau.org
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: coupon-api-pos-validation-sdk
+                port:
+                  number: 3000
