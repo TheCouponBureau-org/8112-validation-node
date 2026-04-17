@@ -4,6 +4,10 @@ metadata:
   name: {{ include "pos-validation-sdk.fullname" . }}
   labels:
     {{- include "pos-validation-sdk.labels" . | nindent 4 }}
+  {{- if .Values.backendConfig.enabled }}
+  annotations:
+    cloud.google.com/backend-config: '{"default": "{{ include "pos-validation-sdk.fullname" . }}-backendconfig"}'
+  {{- end }}
 spec:
   type: {{ .Values.service.type }}
   selector:

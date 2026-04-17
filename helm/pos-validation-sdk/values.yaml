@@ -3,11 +3,20 @@ replicaCount: 2
 image:
   repository: docker.io/YOUR_DOCKERHUB_USERNAME/pos-validation-sdk
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 service:
-  type: LoadBalancer
+  type: ClusterIP
   port: 3000
+
+backendConfig:
+  enabled: true
+  healthCheck:
+    requestPath: /healthz
+    checkIntervalSec: 15
+    timeoutSec: 5
+    healthyThreshold: 1
+    unhealthyThreshold: 2
 
 env:
   PORT: "3000"

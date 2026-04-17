@@ -3,7 +3,7 @@ dotenv.config();
 
 const express = require("express");
 const ioredis = require('ioredis');
-const { get_access_token, set_access_token, coupons_valid_for_basket, redeem_coupons, rollback_coupons, configure_api_client, set_redis_client } = require("../index");
+const { get_access_token, set_access_token, coupons_valid_for_basket, redeem_coupons, rollback_coupons, configure_api_client, set_redis_client } = require("pos-validation-sdk");
 const app = express();
 
 const tcb_endpoint = process.env.TBC_ENDPOINT;
@@ -17,6 +17,15 @@ let redisConnObj = {
 
 // const redisClient = null;
 const redisClient = new ioredis(redisConnObj);
+
+// GKE Ingress HTTP health checks hit GET / by default.
+app.get("/", (req, res) => {
+    res.status(200).json({ status: "ok", service: "pos-validation-sdk" });
+});
+
+app.get("/healthz", (req, res) => {
+    res.status(200).json({ status: "ok" });
+});
 
 function return_error_response(res, error) {
     console.log(error);
