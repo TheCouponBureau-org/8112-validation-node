@@ -32,12 +32,25 @@ app.get("/healthz", (req, res) => {
 });
 
 function return_error_response(res, error) {
+    console.error("[REQUEST_ERROR]", {
+        message: error?.message,
+        stack: error?.stack
+    });
     if (error.response) {
         delete error.response.data.execution_start_time;
         delete error.response.data.execution_time_in_ms;
         return res.status(error.response.status).json(error.response.data);
     }
     return res.status(500).json({ status: "error", message: error.message });
+}
+
+function get_auth_headers(headers) {
+    return {
+        retailer_email_domain: headers.retailer_email_domain || headers["retailer-email-domain"] || headers["x-retailer-email-domain"] || headers["x-retailer-domain"],
+        access_key: headers.access_key || headers["access-key"] || headers["x-access-key"] || headers["x-api-key"],
+        access_token: headers.access_token || headers["access-token"] || headers["x-access-token"],
+        use_redis: headers.use_redis || headers["use-redis"] || headers["x-use-redis"]
+    };
 }
 
 app.post("/get_access_token", async (req, res) => {
@@ -55,12 +68,17 @@ app.post("/coupons_valid_for_basket", async (req, res) => {
     try {
         const start_time = performance.now();
         const input = req.body;
-        //const { retailer_email_domain, access_key, access_token, use_redis } = req.headers;
-        // 🔥 FIXED HEADER EXTRACTION
-        const retailer_email_domain = req.headers["x-retailer-domain"];
-        const access_key = req.headers["x-api-key"];
-        const access_token = req.headers["x-access-token"];
-        const use_redis = req.headers["use_redis"];
+        const { retailer_email_domain, access_key, access_token, use_redis } = get_auth_headers(req.headers);
+        if (!access_key || !access_token) {
+            return res.status(400).json({
+                status: "error",
+                message: "Missing required headers",
+                required: [
+                    "access_key (or x-api-key)",
+                    "access_token (or x-access-token)"
+                ]
+            });
+        }
 
         await configure_api_client(tcb_endpoint, 10000, 3, 1000);
         set_access_token(access_key, access_token);
@@ -77,10 +95,17 @@ app.post("/redeem_coupons", async (req, res) => {
     try {
         const start_time = performance.now();
         const { coupons, retailer_email_domain } = req.body;
-        //const { access_key, access_token, use_redis } = req.headers;
-        const access_key = req.headers["x-api-key"];
-        const access_token = req.headers["x-access-token"];
-        const use_redis = req.headers["use_redis"];
+        const { access_key, access_token, use_redis } = get_auth_headers(req.headers);
+        if (!access_key || !access_token) {
+            return res.status(400).json({
+                status: "error",
+                message: "Missing required body/header fields",
+                required: [
+                    "access_key (or x-api-key)",
+                    "access_token (or x-access-token)"
+                ]
+            });
+        }
 
         await configure_api_client(tcb_endpoint, 10000, 3, 1000);
         set_access_token(access_key, access_token);
@@ -97,9 +122,17 @@ app.post("/rollback_coupons", async (req, res) => {
     try {
         const start_time = performance.now();
         const { coupons, retailer_email_domain } = req.body;
-        //const { access_key, access_token } = req.headers;
-        const access_key = req.headers["x-api-key"];
-        const access_token = req.headers["x-access-token"];     
+        const { access_key, access_token } = get_auth_headers(req.headers);
+        if (!access_key || !access_token) {
+            return res.status(400).json({
+                status: "error",
+                message: "Missing required body/header fields",
+                required: [
+                    "access_key (or x-api-key)",
+                    "access_token (or x-access-token)"
+                ]
+            });
+        }
 
         await configure_api_client(tcb_endpoint, 10000, 3, 1000);
         set_access_token(access_key, access_token);

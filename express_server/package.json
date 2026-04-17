@@ -1,6 +1,6 @@
 {
   "name": "pos-validation-sdk",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "POS Validation SDK Server",
   "main": "index.js",
   "scripts": {
@@ -13,6 +13,6 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "ioredis": "^5.5.0",
-    "pos-validation-sdk": "^1.2.2"
+    "pos-validation-sdk": "^1.2.7"
   }
 }
