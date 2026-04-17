@@ -134,3 +134,6 @@ dist
 
 
 .DS_Store
+
+# Generated Kubernetes log bundles
+k8s-logs-*/

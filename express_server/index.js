@@ -8,7 +8,11 @@ const app = express();
 
 const tcb_endpoint = process.env.TBC_ENDPOINT;
 
-app.use(express.json());
+app.use(express.json({
+    verify: (req, res, buf, encoding) => {
+        req.rawBody = buf && buf.length ? buf.toString(encoding || "utf8") : "";
+    }
+}));
 
 let redisConnObj = {
     host: process.env.REDIS_HOST,
@@ -105,6 +109,27 @@ app.post("/rollback_coupons", async (req, res) => {
     } catch (error) {
         return return_error_response(res, error);
     }
+});
+
+// Handle malformed JSON payloads with a clean 400 response and server-side diagnostics.
+app.use((err, req, res, next) => {
+    if (err instanceof SyntaxError && err.status === 400 && "body" in err) {
+        const rawBody = typeof req.rawBody === "string" ? req.rawBody : "";
+        const rawBodyPreview = rawBody.length > 2000 ? `${rawBody.slice(0, 2000)}...[truncated]` : rawBody;
+        console.error("[INVALID_JSON_PAYLOAD]", {
+            method: req.method,
+            path: req.originalUrl,
+            content_type: req.headers["content-type"],
+            error: err.message,
+            raw_body: rawBodyPreview
+        });
+        return res.status(400).json({
+            status: "error",
+            message: "Invalid JSON payload",
+            details: err.message
+        });
+    }
+    return next(err);
 });
 
 app.listen(process.env.PORT, () => {

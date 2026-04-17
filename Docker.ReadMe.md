@@ -77,9 +77,27 @@ kubectl run curltest --rm -it --restart=Never -n coupon-app --image=curlimages/c
 
 # For Mac
 
-docker buildx create --use --name multiarch-builder 2>/dev/null || true
+# Build correct amd64 image with latest fix
 docker buildx build \
   --platform linux/amd64 \
-  -t docker.io/thecouponbureau/pos-validation-sdk:v4 \
+  -t docker.io/thecouponbureau/pos-validation-sdk:v7 \
   --push \
   ./express_server
+
+# Deploy
+helm upgrade --install coupon-api ./helm/pos-validation-sdk \
+  -n coupon-app \
+  --set image.repository=docker.io/thecouponbureau/pos-validation-sdk \
+  --set image.tag=v7 \
+  --wait --timeout 10m
+
+# Verify
+kubectl get pods -n coupon-app
+kubectl rollout status deploy/coupon-api-pos-validation-sdk -n coupon-app --timeout=10m
+curl -i https://api.pos.thecouponbureau.org/healthz
+
+
+
+# Read live logs
+
+./scripts/get-gke-logs.sh coupon-app pos-validation-sdk --follow --pattern "Cannot read properties of undefined"
