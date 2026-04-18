@@ -54,7 +54,7 @@ resolve_default_image_tag() {
     IMAGE_TAG="$(cat "${TAG_STATE_FILE}")"
     return
   fi
-  IMAGE_TAG="v8"
+  IMAGE_TAG="v9"
 }
 
 if [[ ! -d "${CHART_SRC_DIR}" ]]; then
