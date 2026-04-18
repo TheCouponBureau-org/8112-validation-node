@@ -18,6 +18,17 @@ gcloud container clusters create my-cluster \
   --num-nodes 3 \
   --machine-type e2-standard-2
 
+# Destroy clsuter
+
+gcloud container clusters delete my-cluster \
+  --zone us-central1-a
+
+# Delete Static IP
+
+gcloud compute addresses list --global
+gcloud compute addresses delete <STATIC_IP_NAME> --global
+
+
 gcloud container clusters get-credentials my-cluster --zone us-central1-a --project project-22f2ce0f-25a9-4086-a7e
 
 

@@ -1,0 +1,3 @@
+image:
+  repository: docker.io/thecouponbureau/pos-validation-sdk
+  tag: v9

@@ -1,0 +1,17 @@
+{{- if .Values.redis.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "pos-validation-sdk.fullname" . }}-redis
+  labels:
+    {{- include "pos-validation-sdk.labels" . | nindent 4 }}
+spec:
+  selector:
+    app.kubernetes.io/name: {{ include "pos-validation-sdk.name" . }}-redis
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - name: redis
+      port: {{ .Values.redis.port | int }}
+      targetPort: redis
+      protocol: TCP
+{{- end }}
