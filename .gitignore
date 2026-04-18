@@ -137,3 +137,6 @@ dist
 
 # Generated Kubernetes log bundles
 k8s-logs-*/
+
+# Generated partner distribution artifacts
+partner-share/
