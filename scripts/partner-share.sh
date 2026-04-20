@@ -14,6 +14,8 @@ CHART_SRC_DIR="${ROOT_DIR}/helm/pos-validation-sdk"
 DEPLOY_SCRIPT_SRC="${ROOT_DIR}/scripts/partner-deploy-gcp.sh"
 DESTROY_SCRIPT_SRC="${ROOT_DIR}/scripts/partner-destroy-gcp.sh"
 CHECK_SCRIPT_SRC="${ROOT_DIR}/scripts/partner-check-gcp-deployment.sh"
+PARTNER_README_SRC="${ROOT_DIR}/scripts/partner-share-README.md"
+PARTNER_README_HTML_SRC="${ROOT_DIR}/scripts/partner-share-README.html"
 OUT_BASE_DIR="${ROOT_DIR}/partner-share"
 BUNDLE_DIR="${OUT_BASE_DIR}/pos-validation-sdk-partner"
 TAG_STATE_FILE="${OUT_BASE_DIR}/.last-image-tag"
@@ -73,6 +75,14 @@ if [[ ! -f "${CHECK_SCRIPT_SRC}" ]]; then
   echo "Check script not found: ${CHECK_SCRIPT_SRC}"
   exit 1
 fi
+if [[ ! -f "${PARTNER_README_SRC}" ]]; then
+  echo "Partner README source not found: ${PARTNER_README_SRC}"
+  exit 1
+fi
+if [[ ! -f "${PARTNER_README_HTML_SRC}" ]]; then
+  echo "Partner README HTML source not found: ${PARTNER_README_HTML_SRC}"
+  exit 1
+fi
 
 mkdir -p "${OUT_BASE_DIR}"
 mkdir -p "${BUNDLE_DIR}"
@@ -87,6 +97,8 @@ cp -R "${CHART_SRC_DIR}" "${BUNDLE_DIR}/pos-validation-sdk"
 cp "${DEPLOY_SCRIPT_SRC}" "${BUNDLE_DIR}/partner-deploy-gcp.sh"
 cp "${DESTROY_SCRIPT_SRC}" "${BUNDLE_DIR}/partner-destroy-gcp.sh"
 cp "${CHECK_SCRIPT_SRC}" "${BUNDLE_DIR}/partner-check-gcp-deployment.sh"
+cp "${PARTNER_README_SRC}" "${BUNDLE_DIR}/README.md"
+cp "${PARTNER_README_HTML_SRC}" "${BUNDLE_DIR}/README.html"
 chmod +x "${BUNDLE_DIR}/partner-deploy-gcp.sh"
 chmod +x "${BUNDLE_DIR}/partner-destroy-gcp.sh"
 chmod +x "${BUNDLE_DIR}/partner-check-gcp-deployment.sh"
@@ -95,6 +107,8 @@ chmod +x "${BUNDLE_DIR}/partner-check-gcp-deployment.sh"
 cp "${DEPLOY_SCRIPT_SRC}" "${OUT_BASE_DIR}/partner-deploy-gcp.sh"
 cp "${DESTROY_SCRIPT_SRC}" "${OUT_BASE_DIR}/partner-destroy-gcp.sh"
 cp "${CHECK_SCRIPT_SRC}" "${OUT_BASE_DIR}/partner-check-gcp-deployment.sh"
+cp "${PARTNER_README_SRC}" "${OUT_BASE_DIR}/README.md"
+cp "${PARTNER_README_HTML_SRC}" "${OUT_BASE_DIR}/README.html"
 chmod +x "${OUT_BASE_DIR}/partner-deploy-gcp.sh"
 chmod +x "${OUT_BASE_DIR}/partner-destroy-gcp.sh"
 chmod +x "${OUT_BASE_DIR}/partner-check-gcp-deployment.sh"
@@ -146,32 +160,6 @@ spec:
                 name: ${RELEASE_NAME}-pos-validation-sdk
                 port:
                   number: 3000
-EOF
-
-cat > "${BUNDLE_DIR}/PARTNER-README.md" <<EOF
-# Partner Install Guide (GKE + Helm)
-
-## Recommended (Interactive)
-
-1. Extract the zip.
-2. Open terminal in extracted folder.
-3. Run:
-\`\`\`bash
-./partner-deploy-gcp.sh
-\`\`\`
-
-This script asks for dynamic values (project ID, cluster, zone, domain, static IP, DNS zone) and deploys step-by-step.
-Image tag is managed internally from \`bundle-config.env\` / \`.last-image-tag\`.
-
-## Manual Files Included
-- \`pos-validation-sdk/\` (Helm chart)
-- \`pos-validation-sdk-0.1.0.tgz\` (packaged chart)
-- \`bundle-config.env\` (internal defaults including image tag)
-- \`partner-values.yaml\` (image repo/tag overrides)
-- \`ingress-https.yaml\` (HTTPS + managed cert template)
-- \`partner-deploy-gcp.sh\` (interactive deploy script)
-- \`partner-check-gcp-deployment.sh\` (post-deploy validation script)
-- \`partner-destroy-gcp.sh\` (interactive cleanup script)
 EOF
 
 # Optionally package chart if helm exists.
