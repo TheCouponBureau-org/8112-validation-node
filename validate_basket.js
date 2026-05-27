@@ -169,6 +169,56 @@ function get_discount_in_cents(coupon, basket_items, has_only_primary_purchase, 
     else if(save_value_code === 6) {
         discount_in_cents = coupon.purchase_requirement.primary_purchase_save_value;
     }
+
+    // Handle Progressive Offer (SVC = 7)
+    // Discount qualifying items UP TO save value
+    else if (save_value_code === 7) {
+
+        // Maximum discount allowed
+        const max_discount =
+            coupon.purchase_requirement.primary_purchase_save_value || 0;
+
+        // Get only applicable qualifying items
+        let new_basket_items =
+            applicable_basket_items(basket_items, applies_to_which_item);
+
+        // Filter consumed basket items if present
+        if (consumed_basket.length > 0) {
+
+            new_basket_items = new_basket_items.filter((new_basket_item) => {
+
+                let found = false;
+
+                consumed_basket.map((consumed_basket_item) => {
+
+                    if (
+                        consumed_basket_item.product_code ===
+                        new_basket_item.product_code
+                    ) {
+                        found = true;
+                    }
+                });
+
+                return found;
+            });
+        }
+
+        // Calculate qualifying purchase total
+        let qualifying_purchase_price = 0;
+
+        new_basket_items.map(item => {
+            qualifying_purchase_price +=
+                item.price * item.quantity * 100;
+        });
+
+        // Progressive discount logic
+        // discount = MIN(qualifying total, save value)
+        discount_in_cents = Math.min(
+            qualifying_purchase_price,
+            max_discount
+        );
+    }
+    
     return discount_in_cents;
 }
 
